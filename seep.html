@@ -949,12 +949,18 @@ function buildMoveCtx() {
 }
 
 // ── Rule: SEEP (highest priority – overrides all) ──
+// Houses are permanent structures and are EXCLUDED from the seep sum.
+// Only loose (non-house) floor cards count. Seep fires when:
+//   hand card rank === sum of all loose floor cards
 function ruleSeep(ctx) {
-  if (ctx.floor.length === 0)
-    return {valid:false, reason:'Floor is empty'};
-  if (ctx.handCard.rank !== ctx.floorSum)
-    return {valid:false, reason:`${rn(ctx.handCard.rank)} ≠ floor total (${ctx.floorSum})`};
-  return {valid:true, reason:'Seep! Clear all floor cards', meta:{}};
+  const looseItems = ctx.floor.filter(it => it.type === 'card');
+  if (looseItems.length === 0)
+    return {valid:false, reason:'No loose cards on floor to seep'};
+  const looseSum = looseItems.reduce((s,it) => s + it.card.rank, 0);
+  if (ctx.handCard.rank !== looseSum)
+    return {valid:false,
+      reason:`${rn(ctx.handCard.rank)} ≠ loose floor total (${looseSum}) — houses excluded`};
+  return {valid:true, reason:'Seep! Capture all loose floor cards', meta:{looseSum}};
 }
 
 // ── Rule: PICK ──
@@ -1056,10 +1062,12 @@ function ruleAddToHouse(ctx) {
 }
 
 // ── Rule: THROW (only when no capture is possible) ──
+// Only loose floor cards participate in mandatory-capture check; houses don't.
 function ruleThrow(ctx) {
-  if (hasSubsetSum(ctx.floorVals, ctx.handCard.rank))
+  const looseVals = ctx.floor.filter(it => it.type==='card').map(it => it.card.rank);
+  if (hasSubsetSum(looseVals, ctx.handCard.rank))
     return {valid:false,
-      reason:`${rn(ctx.handCard.rank)} can capture floor cards — must capture first`};
+      reason:`${rn(ctx.handCard.rank)} can capture loose floor cards — must capture first`};
   return {valid:true, reason:'Throw card to floor', meta:{}};
 }
 
@@ -1068,7 +1076,11 @@ function evaluateRules(ctx) {
   // Level 0: SEEP is forced if possible — blocks all other moves
   const seep = ruleSeep(ctx);
   if (seep.valid) {
-    G.selFloorIdxs = G.floor.map((_,i) => i); // auto-select entire floor
+    // Auto-select only loose floor cards — houses stay on the floor after a seep
+    G.selFloorIdxs = G.floor
+      .map((it,i) => ({it,i}))
+      .filter(x => x.it.type === 'card')
+      .map(x => x.i);
     return {
       seep,
       pick:  {valid:false, reason:'Seep is mandatory'},
@@ -1091,7 +1103,12 @@ function evaluateRules(ctx) {
 
 // ── Smart status / hint generator ────────────────────
 function buildStatusMsg(rules, ctx) {
-  if (rules.seep.valid)  return `⚡ Seep is mandatory — take all ${ctx.floor.length} floor cards!`;
+  if (rules.seep.valid) {
+    const looseCount = ctx.floor.filter(it => it.type==='card').length;
+    const hasHouses  = ctx.floor.some(it => it.type==='house');
+    return `⚡ Seep — sweep ${looseCount} loose card${looseCount!==1?'s':''}!`
+      + (hasHouses ? ' (houses remain on floor)' : '');
+  }
   if (rules.pick.valid)  return `Pick: take ${ctx.selItems.length} floor item(s)`;
   if (rules.build.valid) {
     const hv = rules.build.meta.houseVal;
@@ -1215,8 +1232,8 @@ function doAction(type) {
   if (type==='throw' && !a.throw) return;
 
   switch(type) {
-    case 'pick':
-    case 'seep':   execPickup(); break;
+    case 'pick':   execPickup(false); break;
+    case 'seep':   execPickup(true);  break;
     case 'build':  execBuild(a.buildVal); break;  // execBuild handles both fresh house & break
     case 'add':    execAdd(); break;
     case 'throw':  execThrow(); break;
@@ -1224,7 +1241,9 @@ function doAction(type) {
 }
 
 // ── Pick / Seep ──
-function execPickup() {
+// isSeep=true  → explicit Seep action (loose cards swept; bonus always fires)
+// isSeep=false → regular Pick (bonus fires only if floor becomes fully empty)
+function execPickup(isSeep) {
   const cp   = G.currentPlayer;
   const team = cp%2;
   const hc   = G.hands[cp][G.selHandIdx];
@@ -1239,7 +1258,9 @@ function execPickup() {
   G.isFirstTurn  = false;
   clearSel();
 
-  if (G.floor.length===0 && !allHandsEmpty()) {
+  // Award seep bonus if: explicit seep action, OR floor completely cleared by a pick
+  const seepBonus = isSeep || (G.floor.length === 0);
+  if (seepBonus && !allHandsEmpty()) {
     const pts = wasFirst ? 25 : 50;
     G.seepBonus[team] += pts;
     showSeepOverlay(team, pts, advanceTurn);
