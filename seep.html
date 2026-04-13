@@ -1021,25 +1021,30 @@ function ruleBuildHouse(ctx) {
   return {valid:true, reason:`Build house of ${rn(hv)}`, meta:{houseVal:hv}};
 }
 
-// ── Rule: BREAK HOUSE (opponent kacha house → new higher value) ──
+// ── Rule: UPGRADE HOUSE (any undoubled house → new higher value) ──
+// ANY player may add a card to an undoubled house to change its value,
+// provided the new value ≤ 13 and the player holds the key card for it.
+// Once a house is doubled, its value is locked; only cementing (ruleAddToHouse) applies.
+// Doubling (same-value contribution) is restricted to the owning team via ruleAddToHouse.
 function ruleBreakHouse(ctx) {
   if (ctx.selHouses.length !== 1)
-    return {valid:false, reason:'Select exactly one opponent house to break'};
+    return {valid:false, reason:'Select exactly one house to upgrade'};
   const h = ctx.selHouses[0];
-  if (h.team === ctx.team)
-    return {valid:false, reason:'That is your own house — use Add to House to strengthen it'};
   if (h.shared)
-    return {valid:false, reason:'Cannot break a shared house — both teams have contributed'};
+    return {valid:false, reason:'Cannot upgrade a shared house — both teams have contributed'};
   if (h.pucca)
-    return {valid:false, reason:'Cannot break a Pucca (cemented) house'};
+    return {valid:false, reason:'Cannot upgrade a Pucca (cemented) house'};
+  if (isDoubled(h))
+    return {valid:false, reason:'House is already doubled — value is locked; you can only cement it'};
   const nv = h.value + ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
   if (nv <= h.value)
-    return {valid:false, reason:'New house value must exceed current value'};
+    return {valid:false, reason:'New house value must be higher than current value'};
   if (nv > 13)
     return {valid:false, reason:`New value ${nv} exceeds King (13)`};
   if (!ctx.remainder.some(c => c.rank === nv))
-    return {valid:false, reason:`Need key card (${rn(nv)}) in hand to pick up the new house`};
-  return {valid:true, reason:`Break → new house of ${rn(nv)}`, meta:{houseVal:nv}};
+    return {valid:false,
+      reason:`Need key card (${rn(nv)}) in hand to claim the upgraded house`};
+  return {valid:true, reason:`Upgrade house to ${rn(nv)}`, meta:{houseVal:nv}};
 }
 
 // ── Rule: ADD TO HOUSE (reinforce / contribute to a house) ──
@@ -1114,7 +1119,7 @@ function buildStatusMsg(rules, ctx) {
     const hv = rules.build.meta.houseVal;
     return `Build House of ${rn(hv)} (${hv})`;
   }
-  if (rules.break.valid) return `Break → House of ${rn(rules.break.meta.houseVal)} (${rules.break.meta.houseVal})`;
+  if (rules.break.valid) return `Upgrade House → ${rn(rules.break.meta.houseVal)} (${rules.break.meta.houseVal})`;
   if (rules.add.valid)   return `Reinforce house of ${rn(rules.add.meta.houseVal)} → Pucca ★`;
 
   // No valid action yet — generate helpful hint
