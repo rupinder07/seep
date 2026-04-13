@@ -957,9 +957,9 @@ function ruleSeep(ctx) {
   if (looseItems.length === 0)
     return {valid:false, reason:'No loose cards on floor to seep'};
   const looseSum = looseItems.reduce((s,it) => s + it.card.rank, 0);
-  if (ctx.handCard.rank !== looseSum)
+  if (looseSum % ctx.handCard.rank !== 0)
     return {valid:false,
-      reason:`${rn(ctx.handCard.rank)} ≠ loose floor total (${looseSum}) — houses excluded`};
+      reason:`Loose floor total (${looseSum}) not divisible by ${rn(ctx.handCard.rank)} — no seep`};
   return {valid:true, reason:'Seep! Capture all loose floor cards', meta:{looseSum}};
 }
 
