@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seep</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Georgia', serif;
+  background: #1a4a2e;
+  color: #fff;
+  min-height: 100vh;
+  user-select: none;
+}
+
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── Start Screen ── */
+#start-screen {
+  align-items: center; justify-content: center;
+  height: 100vh; gap: 20px; padding: 40px;
+  background: #0e2a1a;
+}
+#start-screen h1 { font-size: 3.5rem; letter-spacing: 6px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,.4); }
+.start-team-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 16px 32px; text-align: center; }
+.start-team-box h3 { color: #ffd700; margin-bottom: 6px; }
+.start-team-box p { color: #ccc; font-size: .9rem; }
+
+/* ── Bid Screen ── */
+#bid-screen {
+  align-items: center; justify-content: center;
+  height: 100vh; gap: 18px; padding: 24px;
+  background: #0a2218;
+}
+#bid-screen h2 { color: #ffd700; font-size: 1.8rem; }
+#bid-screen p  { color: #ccc; font-size: .9rem; text-align: center; max-width: 380px; }
+.bid-hand  { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.bid-btns  { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+.bid-btn   { background: #1e5c32; color: #fff; border: 2px solid #3a8a4e; padding: 10px 18px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+.bid-btn:hover { background: #2a7a42; }
+.bid-btn.pass  { background: #5a2a18; border-color: #8a4a28; }
+.bid-btn.pass:hover { background: #7a3a20; }
+
+/* ══════════════════════════════════════
+   GAME SCREEN  –  4-player table
+══════════════════════════════════════ */
+#game-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 16px;
+}
+
+/* ── Header ── */
+.g-header {
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; gap: 8px; width: 100%;
+}
+.g-header h1 { font-size: 1.1rem; letter-spacing: 3px; color: #ffd700; }
+.g-scores { display: flex; gap: 12px; }
+.g-score  { font-size: .8rem; padding: 3px 12px; border-radius: 6px; background: rgba(255,255,255,.1); }
+.g-score.winning { background: rgba(255,215,0,.25); color: #ffd700; }
+.g-round  { font-size: .75rem; color: #888; }
+
+/* ── Table ── */
+.g-table {
+  display: grid;
+  grid-template-areas:
+    ". p3 ."
+    "p2 floor p4"
+    ". p1 .";
+  grid-template-columns: 120px 380px 120px;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  padding: 10px 6px;
+}
+
+/* ── Player zones ── */
+.player-zone {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; padding: 6px;
+  border-radius: 10px; border: 2px solid transparent;
+  transition: border-color .2s;
+}
+.player-zone.active {
+  border-color: #ffd700;
+  background: rgba(255,215,0,.06);
+}
+.player-zone .p-label {
+  font-size: .7rem; color: #8a9a8a; letter-spacing: 1px; white-space: nowrap;
+}
+.player-zone .p-label.t0 { color: #5ab0ff; }
+.player-zone .p-label.t1 { color: #ff9090; }
+
+.player-zone.top    { grid-area: p3; }
+.player-zone.bottom { grid-area: p1; }
+.player-zone.left   { grid-area: p2; }
+.player-zone.right  { grid-area: p4; }
+
+.cards-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+/* ── Active player hand: full-width row below table, same view for all seats ── */
+.active-hand-zone {
+  width: 100%;
+  background: rgba(0,0,0,.25);
+  border-top: 1px solid rgba(255,255,255,.07);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  padding: 10px 14px 8px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  justify-content: center; align-items: flex-end;
+  min-height: 60px;
+}
+
+/* ── Hidden pile ── */
+.hidden-pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.pile-stack  { position: relative; width: 54px; height: 76px; }
+.card.face-down {
+  background: linear-gradient(145deg, #1a3a7a, #0a1a4a);
+  border-color: #3a5aaa; color: transparent; cursor: default;
+}
+.card.face-down::after {
+  content: ''; position: absolute; inset: 4px;
+  border: 1.5px solid rgba(255,255,255,.15); border-radius: 4px;
+}
+.card.face-down:hover { transform: none; box-shadow: none; }
+.pile-label { font-size: .7rem; color: #7a9a7a; }
+
+/* ── Floor zone ── */
+.floor-zone {
+  grid-area: floor;
+  background: rgba(0,0,0,.3);
+  border-radius: 14px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 8px;
+  min-height: 130px;
+}
+.floor-label { font-size: .65rem; color: #5a8a5a; letter-spacing: 2px; }
+.floor-cards { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center; min-height: 60px; }
+.floor-empty { color: #3a6a3a; font-style: italic; font-size: .85rem; }
+.cap-row { display: flex; gap: 16px; font-size: .7rem; color: #7a8a7a; }
+.cap-row span { color: #ffd700; }
+
+/* ── Floor cards slightly smaller than hand cards ── */
+.card.floor-card { width: 54px; height: 76px; }
+.card.floor-card .rank { font-size: 1rem; }
+.card.floor-card .suit { font-size: .95rem; }
+.card.floor-card .c-tl, .card.floor-card .c-br { font-size: .6rem; }
+
+/* ── Action area ── */
+.g-actions {
+  background: rgba(0,0,0,.4);
+  padding: 10px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  width: 100%;
+}
+.turn-label { font-size: .9rem; color: #ffd700; letter-spacing: 1px; }
+.bid-disp   { font-size: .75rem; color: #ffaa44; min-height: 1em; }
+.action-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.status-msg  { font-size: .78rem; color: #999; min-height: 1em; text-align: center; }
+
+/* ══════════════════════════════════════
+   CARDS
+══════════════════════════════════════ */
+.card {
+  width: 74px; height: 105px;
+  background: #fff; color: #111; border-radius: 9px; border: 2px solid #ccc;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  transition: transform .12s, box-shadow .12s;
+}
+.card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+.card.red { color: #cc0000; }
+.card.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 0 3px #ffd700, 0 6px 18px rgba(255,215,0,.4);
+  transform: translateY(-8px);
+}
+.card .rank  { font-size: 1.45rem; font-weight: bold; line-height: 1.1; }
+.card .suit  { font-size: 1.35rem; line-height: 1; }
+.card .c-tl  { position: absolute; top: 4px; left: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; }
+.card .c-br  { position: absolute; bottom: 4px; right: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; transform: rotate(180deg); }
+
+/* ── House (doubled or pucca) ── */
+.house {
+  width: 60px; min-height: 80px;
+  background: linear-gradient(145deg, #1e4a2e, #0e2a18);
+  border-radius: 8px; border: 2px solid #3a7a4a;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  gap: 2px; padding: 6px 4px;
+  transition: transform .12s, box-shadow .12s;
+}
+.house:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+.house.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 0 3px #ffd700;
+  transform: translateY(-7px);
+}
+/* Doubled house: double-line border */
+.house.doubled {
+  border: 3px double #ffd700;
+  background: linear-gradient(145deg, #1e4a2e, #122a1a);
+}
+.house.pucca { border-color: #ff8c00; border-width: 3px; }
+.house.pucca::after {
+  content: '★'; position: absolute; top: -10px; right: -6px;
+  color: #ff8c00; font-size: .85rem;
+}
+/* Shared house: both teams contributed — purple double border */
+.house.shared {
+  border: 3px double #cc88ff;
+  background: linear-gradient(145deg, #2e1a4e, #1a0a30);
+}
+.house.shared::after {
+  content: '⚑'; position: absolute; top: -10px; right: -6px;
+  color: #cc88ff; font-size: .85rem;
+}
+.house .h-badge.shared { background: #3a1a5a; color: #cc88ff; }
+.house .h-val   { font-size: 1.6rem; font-weight: bold; color: #ffd700; }
+.house .h-badge { font-size: .6rem; padding: 1px 5px; border-radius: 4px; }
+.house .h-badge.t0 { background: #1a3a6a; color: #7aacff; }
+.house .h-badge.t1 { background: #5a1a1a; color: #ffaaaa; }
+.house .h-count { font-size: .58rem; color: #5a8a5a; }
+
+/* ── Undoubled house: shown as pile of cards ── */
+.house-pile {
+  position: relative;
+  width: 58px; height: 90px;
+  cursor: pointer; flex-shrink: 0;
+  transition: transform .12s;
+}
+.house-pile:hover { transform: translateY(-4px); }
+.house-pile.selected .pile-mini-card { box-shadow: 0 0 0 2px #ffd700 !important; }
+.pile-mini-card {
+  position: absolute;
+  width: 46px; height: 34px;
+  background: #fff; color: #111;
+  border-radius: 5px; border: 1.5px solid #bbb;
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,.35);
+}
+.pile-mini-card.red { color: #cc0000; }
+.pmc-rank { font-size: .78rem; line-height: 1; }
+.pmc-suit { font-size: .72rem; line-height: 1; }
+.h-pile-badge {
+  position: absolute;
+  bottom: 0; right: -2px;
+  font-size: .58rem; font-weight: bold;
+  padding: 2px 5px; border-radius: 4px;
+  z-index: 20; white-space: nowrap;
+}
+.h-pile-badge.t0 { background: #1a3a6a; color: #7aacff; }
+.h-pile-badge.t1 { background: #5a1a1a; color: #ffaaaa; }
+
+/* ── Peek button (appears on hover) ── */
+.house-peek-btn {
+  position: absolute;
+  top: 2px; left: 2px;
+  background: rgba(0,0,0,.55);
+  border: none; color: #ddd;
+  border-radius: 4px; font-size: .6rem;
+  padding: 2px 4px; cursor: pointer;
+  opacity: 0; transition: opacity .15s;
+  z-index: 30; line-height: 1;
+}
+.house:hover .house-peek-btn,
+.house-pile:hover .house-peek-btn { opacity: 1; }
+
+/* ── House Peek Modal ── */
+#house-peek {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.72); z-index: 200;
+  align-items: center; justify-content: center;
+}
+#house-peek.show { display: flex; }
+#peek-content {
+  background: #162e1e; border: 2px solid #3a8a4e;
+  border-radius: 14px; padding: 18px 22px;
+  max-width: 92vw; display: flex; flex-direction: column;
+  align-items: center; gap: 14px;
+}
+#peek-title { color: #ffd700; font-size: .95rem; text-align: center; }
+#peek-cards { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.peek-close-btn {
+  background: #3a3a3a; color: #ccc; border: 1px solid #666;
+  border-radius: 6px; padding: 6px 20px; cursor: pointer;
+  font-size: .82rem; font-family: inherit;
+}
+.peek-close-btn:hover { background: #555; }
+
+/* ══════════════════════════════════════
+   ACTION BUTTONS  (always visible)
+══════════════════════════════════════ */
+.btn {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  font-size: .82rem; font-family: inherit; cursor: pointer;
+  font-weight: bold; transition: opacity .15s, transform .1s, box-shadow .1s;
+  min-width: 76px; text-align: center;
+}
+.btn:disabled { opacity: .32; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+
+.btn-pick    { background: #1e6a2e; color: #fff; border: 1px solid #3aaa4e; }
+.btn-seep    { background: #6a1e6a; color: #fff; border: 1px solid #aa3aaa; }
+.btn-build   { background: #1e3a7a; color: #fff; border: 1px solid #3a6aaa; }
+.btn-add     { background: #7a4a00; color: #fff; border: 1px solid #c07820; }
+.btn-throw   { background: #3a3a3a; color: #ccc; border: 1px solid #666; }
+.btn-primary { background: #ffd700; color: #000; }
+
+/* ── Seep overlay ── */
+#seep-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.82); z-index: 100;
+  align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+}
+#seep-overlay.show { display: flex; }
+#seep-overlay h1 { font-size: 4rem; color: #ffd700; animation: pulse .5s infinite alternate; }
+#seep-overlay p  { font-size: 1.4rem; color: #fff; }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+/* ── Round End ── */
+#roundend-screen {
+  align-items: center; justify-content: flex-start;
+  min-height: 100vh; padding: 28px 20px; gap: 14px; overflow-y: auto;
+}
+#roundend-screen h2 { font-size: 1.6rem; color: #ffd700; }
+.score-table { width: 100%; max-width: 480px; border-collapse: collapse; font-size: .88rem; }
+.score-table th, .score-table td { padding: 7px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.1); }
+.score-table th { color: #ffd700; background: rgba(0,0,0,.3); }
+.score-table td:nth-child(2), .score-table td:nth-child(3) { text-align: right; }
+.score-total td { font-weight: bold; color: #ffd700; }
+.cum-box { background: rgba(0,0,0,.3); border-radius: 12px; padding: 14px 28px; text-align: center; width: 100%; max-width: 480px; }
+.cum-box h3 { color: #ffd700; margin-bottom: 8px; }
+.cum-vals { display: flex; gap: 28px; justify-content: center; font-size: 1.2rem; }
+
+/* ── Game Over ── */
+#gameover-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 22px; padding: 40px; }
+#gameover-screen h1 { font-size: 2.4rem; color: #ffd700; text-align: center; }
+#gameover-screen p  { color: #ccc; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ═════════ START SCREEN ═════════ -->
+<div id="start-screen" class="screen active">
+  <h1>♠ SEEP ♠</h1>
+  <p style="color:#aaa">Classic 4-player card game from Punjab</p>
+  <div class="start-team-box">
+    <h3>Teams</h3>
+    <p>Team 1 (blue): Player 1 &amp; Player 3</p>
+    <p>Team 2 (red):&nbsp; Player 2 &amp; Player 4</p>
+  </div>
+  <button class="btn btn-primary" onclick="startGame()" style="font-size:1.1rem;padding:12px 36px">Start Game</button>
+</div>
+
+<!-- ═════════ BID SCREEN ═════════ -->
+<div id="bid-screen" class="screen">
+  <h2>♠ Bid Phase</h2>
+  <p id="bid-instr">Look at your 4 cards and choose a bid ≥ 9. You must hold a card of that rank as your key to eventually pick up the house.</p>
+  <div class="bid-hand" id="bid-hand-area"></div>
+  <p id="bid-hint" style="color:#ffa040;font-size:.8rem;"></p>
+  <div class="bid-btns" id="bid-btn-area"></div>
+</div>
+
+<!-- ═════════ GAME SCREEN ═════════ -->
+<div id="game-screen" class="screen">
+
+  <!-- Header -->
+  <div class="g-header">
+    <h1>♠ SEEP</h1>
+    <div class="g-scores">
+      <div class="g-score" id="g-sc0">Team 1 (P1&amp;P3): <strong id="sv0">0</strong></div>
+      <div class="g-score" id="g-sc1">Team 2 (P2&amp;P4): <strong id="sv1">0</strong></div>
+    </div>
+    <div class="g-round" id="g-round">Round 1</div>
+  </div>
+
+  <!-- Table -->
+  <div class="g-table">
+
+    <!-- Player 3 (top) -->
+    <div class="player-zone top" id="zone-2">
+      <div class="cards-row" id="hand-2"></div>
+      <div class="p-label t0" id="lbl-2">Player 3 · Team 1</div>
+    </div>
+
+    <!-- Player 2 (left) -->
+    <div class="player-zone left" id="zone-1">
+      <div class="cards-row" id="hand-1"></div>
+      <div class="p-label t1" id="lbl-1">P2·T2</div>
+    </div>
+
+    <!-- Floor -->
+    <div class="floor-zone">
+      <div class="floor-label">TABLE</div>
+      <div class="floor-cards" id="floor-area"></div>
+      <div class="cap-row">
+        <div>T1 pts: <span id="cap0">0</span></div>
+        <div>T2 pts: <span id="cap1">0</span></div>
+      </div>
+    </div>
+
+    <!-- Player 4 (right) -->
+    <div class="player-zone right" id="zone-3">
+      <div class="p-label t1" id="lbl-3">P4·T2</div>
+      <div class="cards-row" id="hand-3"></div>
+    </div>
+
+    <!-- Player 1 (bottom) -->
+    <div class="player-zone bottom" id="zone-0">
+      <div class="p-label t0" id="lbl-0">Player 1 · Team 1</div>
+      <div class="cards-row" id="hand-0"></div>
+    </div>
+
+  </div><!-- .g-table -->
+
+  <!-- Active player's hand — always full-width regardless of seat position -->
+  <div class="active-hand-zone" id="active-hand-zone"></div>
+
+  <!-- Actions -->
+  <div class="g-actions">
+    <div class="turn-label" id="turn-lbl">Player 1's Turn</div>
+    <div class="bid-disp"  id="bid-disp"></div>
+    <div class="action-btns">
+      <button class="btn btn-pick"  id="btn-pick"  onclick="doAction('pick')"  disabled>Pick</button>
+      <button class="btn btn-seep"  id="btn-seep"  onclick="doAction('seep')"  disabled>Seep</button>
+      <button class="btn btn-build" id="btn-build" onclick="doAction('build')" disabled>Build House</button>
+      <button class="btn btn-add"   id="btn-add"   onclick="doAction('add')"   disabled>Add to House</button>
+      <button class="btn btn-throw" id="btn-throw" onclick="doAction('throw')" disabled>Throw</button>
+    </div>
+    <div class="status-msg" id="status-msg">Select a card from your hand to begin.</div>
+  </div>
+
+</div><!-- #game-screen -->
+
+<!-- ═════════ ROUND END ═════════ -->
+<div id="roundend-screen" class="screen">
+  <h2 id="re-title">Round 1 Complete</h2>
+  <table class="score-table">
+    <thead><tr><th>Category</th><th>Team 1</th><th>Team 2</th></tr></thead>
+    <tbody id="re-body"></tbody>
+  </table>
+  <div class="cum-box">
+    <h3>Cumulative Score</h3>
+    <div class="cum-vals">
+      <div>Team 1: <strong id="cum0">0</strong></div>
+      <div>Team 2: <strong id="cum1">0</strong></div>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="re-btn" onclick="nextRound()" style="font-size:1rem;padding:10px 28px">Next Round ▶</button>
+</div>
+
+<!-- ═════════ GAME OVER ═════════ -->
+<div id="gameover-screen" class="screen">
+  <h1 id="go-title">🏆 Team 1 Wins!</h1>
+  <p  id="go-scores"></p>
+  <button class="btn btn-primary" onclick="startGame()" style="font-size:1rem;padding:10px 28px">New Game</button>
+</div>
+
+<!-- Seep Overlay -->
+<div id="seep-overlay">
+  <h1>SEEP!</h1>
+  <p id="seep-msg">+50 points!</p>
+</div>
+
+<!-- House Peek Modal -->
+<div id="house-peek" onclick="closePeek()">
+  <div id="peek-content" onclick="event.stopPropagation()">
+    <div id="peek-title">House Cards</div>
+    <div id="peek-cards"></div>
+    <button class="peek-close-btn" onclick="closePeek()">Close ✕</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONSTANTS & HELPERS
+// ══════════════════════════════════════════════════════
+const SUITS     = ['S','H','D','C'];
+const SUIT_SYM  = {S:'♠',H:'♥',D:'♦',C:'♣'};
+const SUIT_ORD  = {S:0,H:1,D:2,C:3};
+const RANK_NAME = {1:'A',11:'J',12:'Q',13:'K'};
+const WIN_SCORE = 100;
+
+const rn  = r => RANK_NAME[r] || String(r);
+const sym = s => SUIT_SYM[s];
+const red = s => s==='H'||s==='D';
+
+function cardPts(c) {
+  if (c.suit==='S')                      return c.rank;   // every spade = face value
+  if (c.suit==='D' && c.rank===10)       return 6;        // 10♦ = 6
+  if (c.rank===1)                        return 1;        // other aces
+  return 0;
+}
+
+function fiv(item) {  // floor-item value
+  return item.type==='house' ? item.value : item.card.rank;
+}
+
+// A house is "doubled" when the sum of all its card ranks ≥ 2 × declared value
+function isDoubled(house) {
+  return house.cards.reduce((s,c) => s + c.rank, 0) >= 2 * house.value;
+}
+
+// ── Auto-merge: find a subset of vals that sums to target; return their indices or null ──
+function findSubsetIndices(vals, target) {
+  function bt(i, rem, path) {
+    if (rem === 0) return path;
+    if (i >= vals.length || rem < 0) return null;
+    const withI = bt(i+1, rem - vals[i], [...path, i]);
+    if (withI !== null) return withI;
+    return bt(i+1, rem, path);
+  }
+  return bt(0, target, []);
+}
+
+// After building/cementing a house, absorb any loose floor cards that sum to house.value.
+// Runs in a loop until no more groups can be found.
+function mergeLooseIntoHouse(house) {
+  let merged = true;
+  while (merged) {
+    merged = false;
+    const loose = G.floor
+      .map((it, i) => ({it, i}))
+      .filter(x => x.it.type === 'card');
+    if (!loose.length) break;
+    const sub = findSubsetIndices(loose.map(x => x.it.card.rank), house.value);
+    if (sub !== null) {
+      const floorIdxs = sub.map(si => loose[si].i);
+      house.cards.push(...floorIdxs.map(i => G.floor[i].card));
+      floorIdxs.sort((a,b) => b-a).forEach(i => G.floor.splice(i, 1));
+      merged = true;
+    }
+  }
+}
+
+function sortHand(hand) {
+  hand.sort((a,b) => a.rank - b.rank || SUIT_ORD[a.suit] - SUIT_ORD[b.suit]);
+}
+
+function initDeck() {
+  const d = [];
+  for (const s of SUITS) for (let r=1;r<=13;r++) d.push({suit:s,rank:r});
+  return d;
+}
+
+function shuffle(a) {
+  for (let i=a.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// Subset-sum check: does any subset of `vals` sum to `target`?
+function hasSubsetSum(vals, target) {
+  const dp = new Set([0]);
+  for (const v of vals) {
+    for (const s of [...dp]) dp.add(s+v);
+    if (dp.has(target)) return true;
+  }
+  return dp.has(target);
+}
+
+// Flatten a floor item to its component cards
+function itemCards(item) {
+  return item.type==='house' ? item.cards : [item.card];
+}
+
+// ══════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════
+let G = {};
+
+function freshState() {
+  return {
+    deck: shuffle(initDeck()),
+    hands: [[],[],[],[]],
+    floor: [],
+    captured: [[],[]],
+    scores: [0,0],
+    seepBonus: [0,0],
+    currentPlayer: 0,
+    bidder: 0,
+    bidValue: null,
+    phase: 'bid',
+    roundNum: 1,
+    isFirstTurn: true,
+    lastCaptureTeam: null,
+    selHandIdx: null,
+    selFloorIdxs: [],
+  };
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREEN HELPERS
+// ══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════
+//  START / BID
+// ══════════════════════════════════════════════════════
+function startGame() {
+  G = freshState();
+  G.hands[G.bidder] = G.deck.splice(0,4);
+  sortHand(G.hands[G.bidder]);
+  showBidScreen();
+}
+
+function showBidScreen() {
+  showScreen('bid-screen');
+  renderBidScreen();
+}
+
+function renderBidScreen() {
+  const hand   = G.hands[G.bidder];
+  const maxRnk = Math.max(...hand.map(c=>c.rank));
+  const canBid = maxRnk >= 9;
+
+  // Can pass if highest is exactly a non-spade 9
+  const has9Spade = hand.some(c=>c.rank===9&&c.suit==='S');
+  const canPass   = !canBid || (maxRnk===9 && !has9Spade);
+
+  document.getElementById('bid-instr').textContent = canBid
+    ? `Player ${G.bidder+1} – choose your bid (≥ 9). You need a matching key card in your hand.`
+    : 'No card ≥ 9 — redealing…';
+
+  // Hand display
+  const ha = document.getElementById('bid-hand-area');
+  ha.innerHTML = '';
+  hand.forEach(c => ha.appendChild(makeCard(c,false,false)));
+
+  // Bid buttons
+  const ba = document.getElementById('bid-btn-area');
+  ba.innerHTML = '';
+
+  if (canBid) {
+    const validBids = [...new Set(hand.filter(c=>c.rank>=9).map(c=>c.rank))].sort((a,b)=>a-b);
+    validBids.forEach(v => {
+      const b = document.createElement('button');
+      b.className = 'bid-btn';
+      b.textContent = `Bid ${rn(v)} (${v})`;
+      b.onclick = () => confirmBid(v);
+      ba.appendChild(b);
+    });
+  }
+
+  const hint = document.getElementById('bid-hint');
+  if (canPass) {
+    hint.textContent = canBid ? 'You may pass (highest card is a non-♠ 9).' : '';
+    const pb = document.createElement('button');
+    pb.className = 'bid-btn pass';
+    pb.textContent = 'Pass (Redeal)';
+    pb.onclick = reDealBid;
+    ba.appendChild(pb);
+  } else { hint.textContent = ''; }
+
+  if (!canBid) setTimeout(reDealBid, 1200);
+}
+
+function reDealBid() {
+  G.deck = shuffle(initDeck());
+  G.hands[G.bidder] = G.deck.splice(0,4);
+  sortHand(G.hands[G.bidder]);
+  renderBidScreen();
+}
+
+function confirmBid(value) {
+  G.bidValue = value;
+  // Deal floor + rest of hands
+  G.floor = G.deck.splice(0,4).map(c=>({type:'card',card:c}));
+  G.hands[G.bidder].push(...G.deck.splice(0,8));
+  sortHand(G.hands[G.bidder]);
+  for (let p=0;p<4;p++) {
+    if (p===G.bidder) continue;
+    G.hands[p] = G.deck.splice(0,12);
+    sortHand(G.hands[p]);
+  }
+  G.phase = 'play';
+  showScreen('game-screen');
+  renderGame();
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER GAME
+// ══════════════════════════════════════════════════════
+const PLAYER_LABELS = [
+  ['Player 1','T1','t0'],
+  ['Player 2','T2','t1'],
+  ['Player 3','T1','t0'],
+  ['Player 4','T2','t1'],
+];
+// Layout positions: index in display grid
+// zone-0 = bottom (P mapped by currentPlayer), zone-1 = left, zone-2 = top, zone-3 = right
+// We keep positions fixed: zone-X always shows player X (0-indexed)
+// active player has gold border
+
+function renderGame() {
+  const cp = G.currentPlayer;
+  const t0 = G.scores[0], t1 = G.scores[1];
+
+  // Header
+  document.getElementById('sv0').textContent = G.scores[0];
+  document.getElementById('sv1').textContent = G.scores[1];
+  document.getElementById('g-sc0').className = 'g-score' + (t0>t1?' winning':'');
+  document.getElementById('g-sc1').className = 'g-score' + (t1>t0?' winning':'');
+  document.getElementById('g-round').textContent = `Round ${G.roundNum}`;
+
+  // Player labels & active highlight
+  [0,1,2,3].forEach(p => {
+    const [name,,cls] = PLAYER_LABELS[p];
+    const lbl = document.getElementById(`lbl-${p}`);
+    lbl.textContent = (p===0||p===2) ? `${name} · Team ${p%2===0?1:2}` : `P${p+1}·T${p%2===0?1:2}`;
+    lbl.className = `p-label ${cls}${p===cp?' ':''}`;
+    document.getElementById(`zone-${p}`).classList.toggle('active', p===cp);
+  });
+
+  // Turn label
+  const [cpName] = PLAYER_LABELS[cp];
+  document.getElementById('turn-lbl').textContent = `${cpName}'s Turn (Team ${cp%2+1})`;
+  document.getElementById('bid-disp').textContent = G.bidValue ? `Bid: ${rn(G.bidValue)} (${G.bidValue})` : '';
+
+  // Captured pts
+  document.getElementById('cap0').textContent = calcCapPts(0);
+  document.getElementById('cap1').textContent = calcCapPts(1);
+
+  renderFloor();
+  renderAllHands();
+  updateActions();
+}
+
+function calcCapPts(team) {
+  return G.captured[team].reduce((s,c)=>s+cardPts(c),0) + G.seepBonus[team];
+}
+
+// ── Floor ──
+function renderFloor() {
+  const area = document.getElementById('floor-area');
+  area.innerHTML = '';
+  if (!G.floor.length) {
+    area.innerHTML = '<span class="floor-empty">Empty floor</span>';
+    return;
+  }
+  G.floor.forEach((item,idx) => {
+    const el = item.type==='house' ? makeHouseEl(item,idx) : makeFloorCardEl(item.card,idx);
+    area.appendChild(el);
+  });
+}
+
+// ── Hands ──
+function renderAllHands() {
+  [0,1,2,3].forEach(p => renderPlayerHand(p));
+  renderActiveHand();
+}
+
+// All 4 seat zones always show a hidden pile (count badge) — even the active player.
+// The active player's face-up cards are rendered separately in active-hand-zone.
+function renderPlayerHand(p) {
+  const container = document.getElementById(`hand-${p}`);
+  container.innerHTML = '';
+  const count = G.hands[p].length;
+  if (count > 0) container.appendChild(makeHiddenPile(count));
+}
+
+// Full-width row below the table: shows the current player's cards face-up.
+// This is the same layout for every seat so P2/P4 see the same wrapping grid as P1/P3.
+function renderActiveHand() {
+  const cp   = G.currentPlayer;
+  const zone = document.getElementById('active-hand-zone');
+  zone.innerHTML = '';
+  G.hands[cp].forEach((card, idx) => {
+    const sel = G.selHandIdx === idx;
+    const el  = makeCard(card, true, sel);
+    el.onclick = () => selectHandCard(idx);
+    zone.appendChild(el);
+  });
+}
+
+function makeHiddenPile(count) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'hidden-pile';
+  const stack = document.createElement('div');
+  stack.className = 'pile-stack';
+  // Draw up to 3 staggered face-down cards
+  const show = Math.min(3, count);
+  for (let i = 0; i < show; i++) {
+    const c = document.createElement('div');
+    c.className = 'card face-down';
+    c.style.cssText = `position:absolute; top:${i*4}px; left:${i*4}px; width:54px; height:76px;`;
+    stack.appendChild(c);
+  }
+  const lbl = document.createElement('div');
+  lbl.className = 'pile-label';
+  lbl.textContent = `${count} cards`;
+  wrapper.appendChild(stack);
+  wrapper.appendChild(lbl);
+  return wrapper;
+}
+
+// ── Card element ──
+function makeCard(card, clickable, selected) {
+  const el = document.createElement('div');
+  el.className = 'card'+(red(card.suit)?' red':'')+(selected?' selected':'');
+  if (!clickable) el.style.cursor='default';
+  const s=sym(card.suit), r=rn(card.rank);
+  el.innerHTML = `<div class="c-tl">${r}<br>${s}</div><div class="rank">${r}</div><div class="suit">${s}</div><div class="c-br">${r}<br>${s}</div>`;
+  return el;
+}
+
+// ── Floor card element ──
+function makeFloorCardEl(card, idx) {
+  const sel = G.selFloorIdxs.includes(idx);
+  const el  = makeCard(card, true, sel);
+  el.classList.add('floor-card');
+  el.onclick = () => toggleFloor(idx);
+  return el;
+}
+
+// ── House element ──
+function makeHouseEl(house, idx) {
+  if (!isDoubled(house)) return makeUndoubledHouseEl(house, idx);
+
+  const sel = G.selFloorIdxs.includes(idx);
+  // Priority: shared > pucca > doubled
+  const state = house.shared ? ' shared' : house.pucca ? ' pucca' : ' doubled';
+  const el  = document.createElement('div');
+  el.className = 'house' + state + (sel ? ' selected' : '');
+
+  // Badge: shared shows "T1+T2", otherwise shows owning team
+  const badgeCls  = house.shared ? 'shared' : `t${house.team}`;
+  const badgeTxt  = house.shared ? 'T1+T2' : `T${house.team+1} P${house.owner+1}`;
+
+  el.innerHTML = `
+    <div class="h-val">${rn(house.value)}</div>
+    <div class="h-badge ${badgeCls}">${badgeTxt}</div>
+    <div class="h-count">${house.cards.length}c</div>
+    <button class="house-peek-btn" title="Peek cards">👁</button>`;
+  el.querySelector('.house-peek-btn').onclick = e => { e.stopPropagation(); showHousePeek(house); };
+  el.onclick = () => toggleFloor(idx);
+  return el;
+}
+
+// Undoubled house: show as a fanned pile of mini-cards
+function makeUndoubledHouseEl(house, idx) {
+  const sel = G.selFloorIdxs.includes(idx);
+  const el  = document.createElement('div');
+  el.className = 'house-pile' + (sel ? ' selected' : '');
+  el.title = `Building house of ${rn(house.value)} — not yet doubled`;
+
+  // Show up to 3 cards fanned (latest card on top)
+  const display = house.cards.slice(-3).reverse();
+  display.forEach((c, i) => {
+    const mc = document.createElement('div');
+    mc.className = 'pile-mini-card' + (red(c.suit) ? ' red' : '');
+    mc.style.cssText = `top:${i*18}px; left:${i*4}px; z-index:${10-i};`;
+    mc.innerHTML = `<span class="pmc-rank">${rn(c.rank)}</span><span class="pmc-suit">${sym(c.suit)}</span>`;
+    el.appendChild(mc);
+  });
+
+  // Badge: team color + declared value
+  const badge = document.createElement('div');
+  badge.className = `h-pile-badge t${house.team}`;
+  badge.textContent = `${rn(house.value)} ▸ T${house.team+1}`;
+  el.appendChild(badge);
+
+  // Peek button
+  const pb = document.createElement('button');
+  pb.className = 'house-peek-btn';
+  pb.title = 'Peek all cards';
+  pb.textContent = '👁';
+  pb.onclick = e => { e.stopPropagation(); showHousePeek(house); };
+  el.appendChild(pb);
+
+  el.onclick = () => toggleFloor(idx);
+  return el;
+}
+
+// ── House peek modal ──
+function showHousePeek(house) {
+  const state = house.shared ? ' ⚑ Shared (both teams)' : house.pucca ? ' ★ Pucca' : isDoubled(house) ? ' ◆ Doubled' : ' (building)';
+  document.getElementById('peek-title').textContent =
+    `House of ${rn(house.value)}${state} — ${house.cards.length} cards`;
+  const area = document.getElementById('peek-cards');
+  area.innerHTML = '';
+  house.cards.forEach(c => area.appendChild(makeCard(c, false, false)));
+  document.getElementById('house-peek').classList.add('show');
+}
+
+function closePeek() {
+  document.getElementById('house-peek').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+//  SELECTION
+// ══════════════════════════════════════════════════════
+function selectHandCard(idx) {
+  G.selHandIdx = (G.selHandIdx===idx) ? null : idx;
+  G.selFloorIdxs = [];
+  renderActiveHand(); // only the active hand highlight changes
+  renderFloor();
+  updateActions();
+}
+
+function toggleFloor(idx) {
+  const i = G.selFloorIdxs.indexOf(idx);
+  if (i===-1) G.selFloorIdxs.push(idx);
+  else        G.selFloorIdxs.splice(i,1);
+  renderFloor();
+  updateActions();
+}
+
+// ══════════════════════════════════════════════════════
+//  RULE ENGINE  –  Chain of Responsibility
+// ══════════════════════════════════════════════════════
+
+// ── Move Context (pure data, built once per UI event) ──
+function buildMoveCtx() {
+  if (G.selHandIdx === null) return null;
+  const cp  = G.currentPlayer;
+  const hand = G.hands[cp];
+  const hc   = hand[G.selHandIdx];
+  const sel  = G.selFloorIdxs.map(i => G.floor[i]);
+  return {
+    floor:     G.floor,
+    floorVals: G.floor.map(fiv),
+    floorSum:  G.floor.reduce((s,it) => s + fiv(it), 0),
+    hand,
+    handCard:  hc,
+    handIdx:   G.selHandIdx,
+    selItems:  sel,
+    selSum:    sel.reduce((s,it) => s + fiv(it), 0),
+    selLoose:  sel.filter(it => it.type==='card').map(it => it.card),
+    selHouses: sel.filter(it => it.type==='house'),
+    remainder: hand.filter((_,i) => i !== G.selHandIdx),
+    team:      cp % 2,
+    player:    cp,
+  };
+}
+
+// ── Rule: SEEP (highest priority – overrides all) ──
+function ruleSeep(ctx) {
+  if (ctx.floor.length === 0)
+    return {valid:false, reason:'Floor is empty'};
+  if (ctx.handCard.rank !== ctx.floorSum)
+    return {valid:false, reason:`${rn(ctx.handCard.rank)} ≠ floor total (${ctx.floorSum})`};
+  return {valid:true, reason:'Seep! Clear all floor cards', meta:{}};
+}
+
+// ── Rule: PICK ──
+function rulePick(ctx) {
+  if (ctx.selItems.length === 0)
+    return {valid:false, reason:'No floor items selected'};
+  if (ctx.handCard.rank !== ctx.selSum)
+    return {valid:false, reason:`Selected sum ${ctx.selSum} ≠ ${rn(ctx.handCard.rank)} (${ctx.handCard.rank})`};
+  return {valid:true, reason:`Pick ${ctx.selItems.length} floor item(s)`, meta:{}};
+}
+
+// ── Key-card check: can player claim a house of value hv? ──
+// Either they hold a duplicate in hand, OR a same-team house of same value is on the floor.
+function hasKey(ctx, hv) {
+  return ctx.remainder.some(c => c.rank === hv)
+    || ctx.floor.some(it => it.type==='house' && it.team===ctx.team && it.value===hv);
+}
+
+// ── Rule: BUILD HOUSE (fresh – no existing house in selection) ──
+// Three modes:
+//   Contribute: a house of the computed value already exists on the floor.
+//               No key card required — player is merging their cards into it (makes it shared).
+//   Overlay   : hand.rank === Σloose → house value = hand.rank (immediately doubled).
+//               Requires a duplicate hand card OR same-team house of same value on floor.
+//   Addition  : house value = hand.rank + Σloose ≤ 13.
+//               Requires a key card of that value in remainder or on floor (team house).
+function ruleBuildHouse(ctx) {
+  if (ctx.selHouses.length !== 0)
+    return {valid:false, reason:'Houses in selection — use Add to House instead'};
+  if (ctx.selLoose.length === 0)
+    return {valid:false, reason:'Select floor card(s) to combine with your hand card'};
+
+  const looseSum = ctx.selLoose.reduce((s,c) => s + c.rank, 0);
+
+  // Determine candidate house value (overlay takes priority)
+  const isOverlay = (ctx.handCard.rank === looseSum);
+  const hv = isOverlay ? ctx.handCard.rank : ctx.handCard.rank + looseSum;
+
+  if (!isOverlay && hv > 13)
+    return {valid:false, reason:`Sum ${hv} exceeds King (13) — too high for a house`};
+
+  // ── Contribute mode: house of this value already on floor ──
+  // Any player can add to it — their cards get merged and it becomes shared between teams.
+  const existingHouse = ctx.floor.find(it => it.type==='house' && it.value===hv);
+  if (existingHouse) {
+    if (existingHouse.shared)
+      return {valid:false, reason:`House of ${rn(hv)} is already shared and locked`};
+    return {valid:true,
+      reason:`Contribute to house of ${rn(hv)} (will become shared)`, meta:{houseVal:hv}};
+  }
+
+  // ── New house: need a key card ──
+  if (!hasKey(ctx, hv))
+    return {valid:false,
+      reason: isOverlay
+        ? `Need another ${rn(hv)} in hand, or a partner's house of ${rn(hv)}, to claim this`
+        : `You need a key card (${rn(hv)}) in hand to pick up this house later`};
+  return {valid:true, reason:`Build house of ${rn(hv)}`, meta:{houseVal:hv}};
+}
+
+// ── Rule: BREAK HOUSE (opponent kacha house → new higher value) ──
+function ruleBreakHouse(ctx) {
+  if (ctx.selHouses.length !== 1)
+    return {valid:false, reason:'Select exactly one opponent house to break'};
+  const h = ctx.selHouses[0];
+  if (h.team === ctx.team)
+    return {valid:false, reason:'That is your own house — use Add to House to strengthen it'};
+  if (h.shared)
+    return {valid:false, reason:'Cannot break a shared house — both teams have contributed'};
+  if (h.pucca)
+    return {valid:false, reason:'Cannot break a Pucca (cemented) house'};
+  const nv = h.value + ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
+  if (nv <= h.value)
+    return {valid:false, reason:'New house value must exceed current value'};
+  if (nv > 13)
+    return {valid:false, reason:`New value ${nv} exceeds King (13)`};
+  if (!ctx.remainder.some(c => c.rank === nv))
+    return {valid:false, reason:`Need key card (${rn(nv)}) in hand to pick up the new house`};
+  return {valid:true, reason:`Break → new house of ${rn(nv)}`, meta:{houseVal:nv}};
+}
+
+// ── Rule: ADD TO HOUSE (reinforce / contribute to a house) ──
+// Own team's house   → adds cards, makes it Pucca.
+// Opponent's house   → adds cards, makes it Shared (locked, either team can capture).
+// Shared / Pucca     → blocked; house is already locked.
+// Hand card + selected loose floor cards must sum to house value.
+function ruleAddToHouse(ctx) {
+  if (ctx.selHouses.length !== 1)
+    return {valid:false, reason:'Select a house to reinforce'};
+  const h = ctx.selHouses[0];
+  if (h.pucca || h.shared)
+    return {valid:false, reason:'House is already locked (Pucca ★ or Shared)'};
+  const contrib = ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
+  if (contrib !== h.value)
+    return {valid:false,
+      reason:`Cards must total ${rn(h.value)} (${h.value}) to reinforce — yours total ${contrib}`};
+  const label = h.team !== ctx.team ? `Share house of ${rn(h.value)}` : `Reinforce house of ${rn(h.value)}`;
+  return {valid:true, reason:label, meta:{houseVal:h.value}};
+}
+
+// ── Rule: THROW (only when no capture is possible) ──
+function ruleThrow(ctx) {
+  if (hasSubsetSum(ctx.floorVals, ctx.handCard.rank))
+    return {valid:false,
+      reason:`${rn(ctx.handCard.rank)} can capture floor cards — must capture first`};
+  return {valid:true, reason:'Throw card to floor', meta:{}};
+}
+
+// ── Chain Evaluator ──────────────────────────────────
+function evaluateRules(ctx) {
+  // Level 0: SEEP is forced if possible — blocks all other moves
+  const seep = ruleSeep(ctx);
+  if (seep.valid) {
+    G.selFloorIdxs = G.floor.map((_,i) => i); // auto-select entire floor
+    return {
+      seep,
+      pick:  {valid:false, reason:'Seep is mandatory'},
+      build: {valid:false, reason:'Seep is mandatory'},
+      break: {valid:false, reason:'Seep is mandatory'},
+      add:   {valid:false, reason:'Seep is mandatory'},
+      throw: {valid:false, reason:'Seep is mandatory'},
+    };
+  }
+  // Level 1: evaluate all capture/build/throw rules independently
+  return {
+    seep:  {valid:false},
+    pick:  rulePick(ctx),
+    build: ruleBuildHouse(ctx),
+    break: ruleBreakHouse(ctx),
+    add:   ruleAddToHouse(ctx),
+    throw: ruleThrow(ctx),
+  };
+}
+
+// ── Smart status / hint generator ────────────────────
+function buildStatusMsg(rules, ctx) {
+  if (rules.seep.valid)  return `⚡ Seep is mandatory — take all ${ctx.floor.length} floor cards!`;
+  if (rules.pick.valid)  return `Pick: take ${ctx.selItems.length} floor item(s)`;
+  if (rules.build.valid) {
+    const hv = rules.build.meta.houseVal;
+    return `Build House of ${rn(hv)} (${hv})`;
+  }
+  if (rules.break.valid) return `Break → House of ${rn(rules.break.meta.houseVal)} (${rules.break.meta.houseVal})`;
+  if (rules.add.valid)   return `Reinforce house of ${rn(rules.add.meta.houseVal)} → Pucca ★`;
+
+  // No valid action yet — generate helpful hint
+  const hc = ctx.handCard;
+  const hints = [];
+
+  // Hint A: single floor item matchable (pick)
+  ctx.floor.forEach((it, i) => {
+    if (fiv(it) === hc.rank && !G.selFloorIdxs.includes(i))
+      hints.push(`Click ${rn(fiv(it))} on the floor to Pick it up`);
+  });
+
+  // Hint B: pair of floor items summing to hand rank (pick combo)
+  if (!hints.length) {
+    const loose = ctx.floor.map((it,i) => ({v:fiv(it),i})).filter(x => x.v < hc.rank);
+    for (let a = 0; a < loose.length && !hints.length; a++)
+      for (let b = a+1; b < loose.length; b++)
+        if (loose[a].v + loose[b].v === hc.rank) {
+          hints.push(`Select ${rn(loose[a].v)} + ${rn(loose[b].v)} on floor to Pick`);
+          break;
+        }
+  }
+
+  // Hint C: overlay build — floor cards summing to hand rank (need duplicate or team house)
+  if (!hints.length) {
+    // Find all loose floor cards and check if any subset sums to hc.rank
+    const looseFloor = ctx.floor
+      .map((it,i) => ({it, i}))
+      .filter(x => x.it.type === 'card');
+    // Simple 2-card combo check for the hint
+    outer:
+    for (let a = 0; a < looseFloor.length; a++) {
+      for (let b = a+1; b < looseFloor.length; b++) {
+        const s = looseFloor[a].it.card.rank + looseFloor[b].it.card.rank;
+        if (s === hc.rank && hasKey(ctx, hc.rank)) {
+          const ra = rn(looseFloor[a].it.card.rank), rb = rn(looseFloor[b].it.card.rank);
+          hints.push(`Select floor ${ra}+${rb} + your ${rn(hc.rank)} → Overlay House of ${rn(hc.rank)}`);
+          break outer;
+        }
+      }
+      // Single floor card equal to hand rank (overlay with just one floor card)
+      if (looseFloor[a].it.card.rank === hc.rank && hasKey(ctx, hc.rank)) {
+        hints.push(`Select floor ${rn(hc.rank)} + your ${rn(hc.rank)} → Overlay House of ${rn(hc.rank)}`);
+        break;
+      }
+    }
+  }
+
+  // Hint D: addition build — single floor card + hand card = valid house value
+  if (!hints.length) {
+    for (const {it} of ctx.floor.map((it,i)=>({it,i}))) {
+      if (it.type !== 'card') continue;
+      const hv = hc.rank + it.card.rank;
+      if (hv <= 13 && hasKey(ctx, hv)) {
+        hints.push(`Select floor ${rn(it.card.rank)} + your ${rn(hc.rank)} → Build House of ${rn(hv)}`);
+        break;
+      }
+    }
+  }
+
+  if (!rules.throw.valid) {
+    return hints.length
+      ? hints[0]
+      : `${rn(hc.rank)} must capture — select matching floor cards`;
+  }
+  return hints.length ? hints[0] : `Select floor cards to act, or Throw`;
+}
+
+// ── computeActions: thin wrapper used by updateActions & doAction ──
+function computeActions() {
+  const ctx = buildMoveCtx();
+  if (!ctx) {
+    return {pick:false, seep:false, build:false, buildVal:null, add:false, throw:false,
+            msg:'Select a card from your hand.'};
+  }
+  const rules = evaluateRules(ctx);
+  // Cache rules on G so doAction can decide build vs break without re-evaluating
+  G._rules = rules;
+  const buildActive = rules.build.valid || rules.break.valid;
+  const buildVal    = buildActive
+    ? (rules.build.valid ? rules.build.meta : rules.break.meta).houseVal
+    : null;
+  return {
+    pick:     rules.pick.valid,
+    seep:     rules.seep.valid,
+    build:    buildActive,
+    buildVal,
+    add:      rules.add.valid,
+    throw:    rules.throw.valid,
+    msg:      buildStatusMsg(rules, ctx),
+  };
+}
+
+function updateActions() {
+  const a = computeActions();
+  document.getElementById('btn-pick').disabled  = !a.pick;
+  document.getElementById('btn-seep').disabled  = !a.seep;
+  document.getElementById('btn-build').disabled = !a.build;
+  document.getElementById('btn-add').disabled   = !a.add;
+  document.getElementById('btn-throw').disabled = !a.throw;
+  document.getElementById('btn-build').textContent = a.build ? `Build House (${rn(a.buildVal)})` : 'Build House';
+  document.getElementById('status-msg').textContent = a.msg;
+  renderFloor(); // re-render so seep auto-selection is reflected
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════════════
+function doAction(type) {
+  const a = computeActions();
+  if (type==='pick'  && !a.pick)  return;
+  if (type==='seep'  && !a.seep)  return;
+  if (type==='build' && !a.build) return;
+  if (type==='add'   && !a.add)   return;
+  if (type==='throw' && !a.throw) return;
+
+  switch(type) {
+    case 'pick':
+    case 'seep':   execPickup(); break;
+    case 'build':  execBuild(a.buildVal); break;  // execBuild handles both fresh house & break
+    case 'add':    execAdd(); break;
+    case 'throw':  execThrow(); break;
+  }
+}
+
+// ── Pick / Seep ──
+function execPickup() {
+  const cp   = G.currentPlayer;
+  const team = cp%2;
+  const hc   = G.hands[cp][G.selHandIdx];
+  const captured = [...G.selFloorIdxs.map(i=>G.floor[i]).flatMap(itemCards), hc];
+
+  G.hands[cp].splice(G.selHandIdx,1);
+  [...G.selFloorIdxs].sort((a,b)=>b-a).forEach(i=>G.floor.splice(i,1));
+  G.captured[team].push(...captured);
+  G.lastCaptureTeam = team;
+
+  const wasFirst = G.isFirstTurn;
+  G.isFirstTurn  = false;
+  clearSel();
+
+  if (G.floor.length===0 && !allHandsEmpty()) {
+    const pts = wasFirst ? 25 : 50;
+    G.seepBonus[team] += pts;
+    showSeepOverlay(team, pts, advanceTurn);
+    return;
+  }
+  advanceTurn();
+}
+
+// ── Build House / Break House ──
+function execBuild(val) {
+  const cp      = G.currentPlayer;
+  const team    = cp%2;
+  const hc      = G.hands[cp][G.selHandIdx];
+  const selItems = G.selFloorIdxs.map(i=>G.floor[i]);
+  const allCards = [...selItems.flatMap(itemCards), hc];
+
+  G.hands[cp].splice(G.selHandIdx,1);
+  [...G.selFloorIdxs].sort((a,b)=>b-a).forEach(i=>G.floor.splice(i,1));
+
+  // Only ONE house per value is allowed on the floor at any time.
+  // If one already exists, merge the player's cards into it (making it shared).
+  const existing = G.floor.find(it => it.type==='house' && it.value===val);
+  if (existing) {
+    existing.cards.push(...allCards);
+    if (existing.team !== team) {
+      existing.shared = true; // both teams contributed → locked house
+      existing.pucca  = true;
+    }
+    mergeLooseIntoHouse(existing);
+  } else {
+    const newHouse = {type:'house', cards:allCards, value:val, pucca:false, owner:cp, team, shared:false};
+    G.floor.push(newHouse);
+    mergeLooseIntoHouse(newHouse);
+  }
+
+  G.isFirstTurn = false;
+  clearSel();
+  advanceTurn();
+}
+
+// ── Add to House (reinforce — cement to Pucca) ──
+function execAdd() {
+  const cp   = G.currentPlayer;
+  const hc   = G.hands[cp][G.selHandIdx];
+
+  // Find the house among selected floor items
+  const houseSelIdx = G.selFloorIdxs.find(i => G.floor[i].type === 'house');
+  const house       = G.floor[houseSelIdx];
+  // Loose floor cards also selected as part of the contribution
+  const looseIdxs   = G.selFloorIdxs.filter(i => G.floor[i].type === 'card');
+
+  // Move hand card + loose floor cards into the house
+  house.cards.push(hc, ...looseIdxs.map(i => G.floor[i].card));
+  const team = cp%2;
+  if (house.team !== team) {
+    house.shared = true; // opponent house → now shared between both teams
+  }
+  house.pucca = true;
+  G.hands[cp].splice(G.selHandIdx, 1);
+  // Remove loose floor cards (descending so indices stay valid)
+  looseIdxs.sort((a,b) => b-a).forEach(i => G.floor.splice(i, 1));
+  // Auto-absorb any further loose floor cards summing to house value
+  mergeLooseIntoHouse(house);
+  G.isFirstTurn = false;
+  clearSel();
+  advanceTurn();
+}
+
+// ── Throw ──
+function execThrow() {
+  const cp = G.currentPlayer;
+  const hc = G.hands[cp][G.selHandIdx];
+  G.floor.push({type:'card', card:hc});
+  G.hands[cp].splice(G.selHandIdx,1);
+  G.isFirstTurn = false;
+  clearSel();
+  advanceTurn();
+}
+
+function clearSel() { G.selHandIdx=null; G.selFloorIdxs=[]; }
+
+// ══════════════════════════════════════════════════════
+//  TURN / ROUND MANAGEMENT
+// ══════════════════════════════════════════════════════
+function allHandsEmpty() { return G.hands.every(h=>h.length===0); }
+
+function advanceTurn() {
+  if (allHandsEmpty()) { endRound(); return; }
+  G.currentPlayer = (G.currentPlayer+1)%4;
+  let t=0;
+  while(G.hands[G.currentPlayer].length===0 && t++<4)
+    G.currentPlayer=(G.currentPlayer+1)%4;
+  renderGame();
+}
+
+function showSeepOverlay(team, pts, cb) {
+  const ov = document.getElementById('seep-overlay');
+  document.getElementById('seep-msg').textContent = `+${pts} points for Team ${team+1}!`;
+  ov.classList.add('show');
+  setTimeout(()=>{ ov.classList.remove('show'); cb(); }, 1800);
+}
+
+// ══════════════════════════════════════════════════════
+//  ROUND END / SCORING
+// ══════════════════════════════════════════════════════
+function endRound() {
+  // Remaining floor cards → last capture team
+  if (G.floor.length>0 && G.lastCaptureTeam!==null) {
+    G.captured[G.lastCaptureTeam].push(...G.floor.flatMap(itemCards));
+    G.floor=[];
+  }
+
+  const s0 = G.captured[0].reduce((s,c)=>s+cardPts(c),0) + G.seepBonus[0];
+  const s1 = G.captured[1].reduce((s,c)=>s+cardPts(c),0) + G.seepBonus[1];
+  G.scores[0]+=s0; G.scores[1]+=s1;
+
+  showRoundEnd(s0, s1);
+}
+
+function showRoundEnd(s0, s1) {
+  showScreen('roundend-screen');
+  document.getElementById('re-title').textContent = `Round ${G.roundNum} Complete`;
+
+  const rows = [
+    ['Spades (face value)',  ptsFilter(0,c=>c.suit==='S'), ptsFilter(1,c=>c.suit==='S')],
+    ['10♦',                 ptsFilter(0,c=>c.suit==='D'&&c.rank===10), ptsFilter(1,c=>c.suit==='D'&&c.rank===10)],
+    ['Other Aces',          ptsFilter(0,c=>c.rank===1&&c.suit!=='S'), ptsFilter(1,c=>c.rank===1&&c.suit!=='S')],
+    ['Seep Bonus',          G.seepBonus[0], G.seepBonus[1]],
+  ];
+  const tbody = document.getElementById('re-body');
+  tbody.innerHTML = '';
+  rows.forEach(([lbl,v0,v1])=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${lbl}</td><td>${v0}</td><td>${v1}</td>`;
+    tbody.appendChild(tr);
+  });
+  const tot=document.createElement('tr'); tot.className='score-total';
+  tot.innerHTML=`<td>Round Total</td><td>${s0}</td><td>${s1}</td>`;
+  tbody.appendChild(tot);
+
+  document.getElementById('cum0').textContent=G.scores[0];
+  document.getElementById('cum1').textContent=G.scores[1];
+
+  const btn=document.getElementById('re-btn');
+  if (G.scores[0]>=WIN_SCORE||G.scores[1]>=WIN_SCORE) {
+    btn.textContent='See Results'; btn.onclick=showGameOver;
+  } else {
+    btn.textContent='Next Round ▶'; btn.onclick=nextRound;
+  }
+}
+
+function ptsFilter(team, pred) {
+  return G.captured[team].filter(pred).reduce((s,c)=>s+cardPts(c),0);
+}
+
+function nextRound() {
+  G.roundNum++;
+  G.deck       = shuffle(initDeck());
+  G.hands      = [[],[],[],[]];
+  G.floor      = [];
+  G.captured   = [[],[]];
+  G.seepBonus  = [0,0];
+  G.bidder     = (G.bidder+1)%4;
+  G.bidValue   = null;
+  G.phase      = 'bid';
+  G.isFirstTurn= true;
+  G.lastCaptureTeam = null;
+  G.selHandIdx = null; G.selFloorIdxs=[];
+  G.hands[G.bidder] = G.deck.splice(0,4);
+  sortHand(G.hands[G.bidder]);
+  showBidScreen();
+}
+
+function showGameOver() {
+  showScreen('gameover-screen');
+  const w = G.scores[0]>G.scores[1] ? 'Team 1 (P1 & P3)' : G.scores[1]>G.scores[0] ? 'Team 2 (P2 & P4)' : 'Both Teams (Tie!)';
+  document.getElementById('go-title').textContent  = `🏆 ${w} Wins!`;
+  document.getElementById('go-scores').textContent = `Team 1: ${G.scores[0]} pts  |  Team 2: ${G.scores[1]} pts`;
+}
+</script>
+</body>
+</html>
