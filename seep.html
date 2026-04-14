@@ -990,6 +990,9 @@ function ruleSeep(ctx) {
 function rulePick(ctx) {
   if (ctx.selItems.length === 0)
     return {valid:false, reason:'No floor items selected'};
+  // First turn: bidder may only pick with the bid card
+  if (G.isFirstTurn && ctx.player === G.bidder && ctx.handCard.rank !== G.bidValue)
+    return {valid:false, reason:`First turn: can only pick with the bid card (${rn(G.bidValue)})`};
   if (ctx.handCard.rank !== ctx.selSum)
     return {valid:false, reason:`Selected sum ${ctx.selSum} ≠ ${rn(ctx.handCard.rank)} (${ctx.handCard.rank})`};
   return {valid:true, reason:`Pick ${ctx.selItems.length} floor item(s)`, meta:{}};
@@ -1026,6 +1029,12 @@ function ruleBuildHouse(ctx) {
     return {valid:false, reason:`House value ${hv} is below 9 — minimum house value is 9`};
   if (!isOverlay && hv > 13)
     return {valid:false, reason:`Sum ${hv} exceeds King (13) — too high for a house`};
+  // First turn: bid card can only be used to build if a spare bid card stays in hand
+  if (G.isFirstTurn && ctx.player === G.bidder && ctx.handCard.rank === G.bidValue) {
+    if (!ctx.remainder.some(c => c.rank === G.bidValue))
+      return {valid:false,
+        reason:`First turn: need a second ${rn(G.bidValue)} in hand to build with the bid card`};
+  }
 
   // ── Contribute mode: house of this value already on floor ──
   // Any player can add to it — their cards get merged and it becomes shared between teams.
@@ -1103,6 +1112,9 @@ function ruleAddToHouse(ctx) {
 // ── Rule: THROW (only when no capture is possible) ──
 // Only loose floor cards participate in mandatory-capture check; houses don't.
 function ruleThrow(ctx) {
+  // First turn: bidder may only throw the bid card
+  if (G.isFirstTurn && ctx.player === G.bidder && ctx.handCard.rank !== G.bidValue)
+    return {valid:false, reason:`First turn: can only throw the bid card (${rn(G.bidValue)})`};
   const looseVals = ctx.floor.filter(it => it.type==='card').map(it => it.card.rank);
   if (hasSubsetSum(looseVals, ctx.handCard.rank))
     return {valid:false,
