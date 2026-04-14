@@ -594,6 +594,7 @@ function freshState() {
     phase: 'bid',
     roundNum: 1,
     isFirstTurn: true,
+    handsDealt: false,
     lastCaptureTeam: null,
     selHandIdx: null,
     selFloorIdxs: [],
@@ -676,17 +677,23 @@ function reDealBid() {
   renderBidScreen();
 }
 
-function confirmBid(value) {
-  G.bidValue = value;
-  // Deal floor + rest of hands
-  G.floor = G.deck.splice(0,4).map(c=>({type:'card',card:c}));
+function dealRemainingCards() {
+  // Bidder already has 4 from bidding — give them 8 more to reach 12
   G.hands[G.bidder].push(...G.deck.splice(0,8));
   sortHand(G.hands[G.bidder]);
-  for (let p=0;p<4;p++) {
-    if (p===G.bidder) continue;
+  // Deal 12 to each other player
+  for (let p=0; p<4; p++) {
+    if (p === G.bidder) continue;
     G.hands[p] = G.deck.splice(0,12);
     sortHand(G.hands[p]);
   }
+  G.handsDealt = true;
+}
+
+function confirmBid(value) {
+  G.bidValue = value;
+  // Deal only the 4 floor cards; remaining hands dealt after bidder's first move
+  G.floor = G.deck.splice(0,4).map(c=>({type:'card',card:c}));
   G.phase = 'play';
   showScreen('game-screen');
   renderGame();
@@ -1081,11 +1088,8 @@ function evaluateRules(ctx) {
   // Level 0: SEEP is forced if possible — blocks all other moves
   const seep = ruleSeep(ctx);
   if (seep.valid) {
-    // Auto-select only loose floor cards — houses stay on the floor after a seep
-    G.selFloorIdxs = G.floor
-      .map((it,i) => ({it,i}))
-      .filter(x => x.it.type === 'card')
-      .map(x => x.i);
+    // NOTE: do NOT mutate G.selFloorIdxs here — that would hijack manual floor selection.
+    // The floor auto-selection for seep happens only when the Seep button is clicked (doAction).
     return {
       seep,
       pick:  {valid:false, reason:'Seep is mandatory'},
@@ -1238,7 +1242,14 @@ function doAction(type) {
 
   switch(type) {
     case 'pick':   execPickup(false); break;
-    case 'seep':   execPickup(true);  break;
+    case 'seep':
+      // Auto-select all loose floor cards before executing seep
+      G.selFloorIdxs = G.floor
+        .map((it,i) => ({it,i}))
+        .filter(x => x.it.type === 'card')
+        .map(x => x.i);
+      execPickup(true);
+      break;
     case 'build':  execBuild(a.buildVal); break;  // execBuild handles both fresh house & break
     case 'add':    execAdd(); break;
     case 'throw':  execThrow(); break;
@@ -1353,6 +1364,8 @@ function clearSel() { G.selHandIdx=null; G.selFloorIdxs=[]; }
 function allHandsEmpty() { return G.hands.every(h=>h.length===0); }
 
 function advanceTurn() {
+  // Deal remaining cards after bidder's first move
+  if (!G.handsDealt) dealRemainingCards();
   if (allHandsEmpty()) { endRound(); return; }
   G.currentPlayer = (G.currentPlayer+1)%4;
   let t=0;
@@ -1432,6 +1445,7 @@ function nextRound() {
   G.bidValue   = null;
   G.phase      = 'bid';
   G.isFirstTurn= true;
+  G.handsDealt = false;
   G.lastCaptureTeam = null;
   G.selHandIdx = null; G.selFloorIdxs=[];
   G.hands[G.bidder] = G.deck.splice(0,4);
