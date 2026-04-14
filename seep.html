@@ -1022,6 +1022,8 @@ function ruleBuildHouse(ctx) {
   const isOverlay = (ctx.handCard.rank === looseSum);
   const hv = isOverlay ? ctx.handCard.rank : ctx.handCard.rank + looseSum;
 
+  if (hv < 9)
+    return {valid:false, reason:`House value ${hv} is below 9 — minimum house value is 9`};
   if (!isOverlay && hv > 13)
     return {valid:false, reason:`Sum ${hv} exceeds King (13) — too high for a house`};
 
