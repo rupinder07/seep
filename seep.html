@@ -956,18 +956,34 @@ function buildMoveCtx() {
 }
 
 // ── Rule: SEEP (highest priority – overrides all) ──
-// Houses are permanent structures and are EXCLUDED from the seep sum.
-// Only loose (non-house) floor cards count. Seep fires when:
-//   hand card rank === sum of all loose floor cards
+// A seep requires the hand card to sweep the ENTIRE floor in one move:
+//   • Every house on the floor must have value === hand card rank.
+//   • All loose floor cards must sum to exactly hand card rank (if any exist).
+// Both conditions must hold simultaneously for all items present.
 function ruleSeep(ctx) {
+  if (ctx.floor.length === 0)
+    return {valid:false, reason:'Floor is empty'};
+
+  const r          = ctx.handCard.rank;
   const looseItems = ctx.floor.filter(it => it.type === 'card');
-  if (looseItems.length === 0)
-    return {valid:false, reason:'No loose cards on floor to seep'};
-  const looseSum = looseItems.reduce((s,it) => s + it.card.rank, 0);
-  if (looseSum % ctx.handCard.rank !== 0)
-    return {valid:false,
-      reason:`Loose floor total (${looseSum}) not divisible by ${rn(ctx.handCard.rank)} — no seep`};
-  return {valid:true, reason:'Seep! Capture all loose floor cards', meta:{looseSum}};
+  const houses     = ctx.floor.filter(it => it.type === 'house');
+
+  // Every house must match the hand card rank exactly
+  for (const h of houses) {
+    if (h.value !== r)
+      return {valid:false,
+        reason:`House of ${rn(h.value)} (${h.value}) cannot be swept by ${rn(r)} — values must match`};
+  }
+
+  // All loose cards must sum to exactly the hand card rank
+  if (looseItems.length > 0) {
+    const looseSum = looseItems.reduce((s,it) => s + it.card.rank, 0);
+    if (looseSum !== r)
+      return {valid:false,
+        reason:`Loose cards sum to ${looseSum}, not ${r} — cannot seep`};
+  }
+
+  return {valid:true, reason:'Seep! Sweep the entire floor', meta:{}};
 }
 
 // ── Rule: PICK ──
@@ -1122,10 +1138,8 @@ function evaluateRules(ctx) {
 // ── Smart status / hint generator ────────────────────
 function buildStatusMsg(rules, ctx) {
   if (rules.seep.valid) {
-    const looseCount = ctx.floor.filter(it => it.type==='card').length;
-    const hasHouses  = ctx.floor.some(it => it.type==='house');
-    return `⚡ Seep — sweep ${looseCount} loose card${looseCount!==1?'s':''}!`
-      + (hasHouses ? ' (houses remain on floor)' : '');
+    const total = ctx.floor.length;
+    return `⚡ Seep — sweep entire floor (${total} item${total!==1?'s':''})!`;
   }
   if (rules.pick.valid)  return `Pick: take ${ctx.selItems.length} floor item(s)`;
   if (rules.build.valid) {
@@ -1252,11 +1266,8 @@ function doAction(type) {
   switch(type) {
     case 'pick':   execPickup(false); break;
     case 'seep':
-      // Auto-select all loose floor cards before executing seep
-      G.selFloorIdxs = G.floor
-        .map((it,i) => ({it,i}))
-        .filter(x => x.it.type === 'card')
-        .map(x => x.i);
+      // Auto-select ALL floor items (houses + loose cards) for the sweep
+      G.selFloorIdxs = G.floor.map((_,i) => i);
       execPickup(true);
       break;
     case 'build':  execBuild(a.buildVal); break;  // execBuild handles both fresh house & break
