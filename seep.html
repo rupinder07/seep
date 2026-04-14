@@ -1019,6 +1019,11 @@ function ruleBuildHouse(ctx) {
       reason:`Contribute to house of ${rn(hv)} (will become shared)`, meta:{houseVal:hv}};
   }
 
+  // ── New house: max 2 houses allowed on the floor at once ──
+  const houseCount = ctx.floor.filter(it => it.type === 'house').length;
+  if (houseCount >= 2)
+    return {valid:false, reason:'Maximum of 2 houses are already on the floor'};
+
   // ── New house: need a key card ──
   if (!hasKey(ctx, hv))
     return {valid:false,
@@ -1043,6 +1048,10 @@ function ruleBreakHouse(ctx) {
     return {valid:false, reason:'Cannot upgrade a Pucca (cemented) house'};
   if (isDoubled(h))
     return {valid:false, reason:'House is already doubled — value is locked; you can only cement it'};
+  // The player who last built/modified this house cannot upgrade it again;
+  // another player must modify it first.
+  if (h.owner === ctx.player)
+    return {valid:false, reason:'You built this house — another player must modify it before you can upgrade it'};
   const nv = h.value + ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
   if (nv <= h.value)
     return {valid:false, reason:'New house value must be higher than current value'};
