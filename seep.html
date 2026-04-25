@@ -742,8 +742,7 @@ function renderBidScreen() {
 
   // Non-bidder: show waiting message, hide buttons
   if (!isBidder) {
-    const pName = (G.playerNames && G.playerNames[G.bidder]) || `Player ${G.bidder+1}`;
-    document.getElementById('bid-instr').textContent = `Waiting for ${pName} to bid…`;
+    document.getElementById('bid-instr').textContent = `Waiting for ${playerName(G.bidder)} to bid…`;
     document.getElementById('bid-hand-area').innerHTML = '';
     document.getElementById('bid-btn-area').innerHTML = '';
     document.getElementById('bid-hint').textContent = '';
@@ -755,7 +754,7 @@ function renderBidScreen() {
   const canPass   = !canBid || (maxRnk===9 && !has9Spade);
 
   document.getElementById('bid-instr').textContent = canBid
-    ? `Player ${G.bidder+1} – choose your bid (≥ 9). You need a matching key card in your hand.`
+    ? `${playerName(G.bidder)} – choose your bid (≥ 9). You need a matching key card in your hand.`
     : 'No card ≥ 9 — redealing…';
 
   // Hand display
@@ -828,6 +827,11 @@ function confirmBid(value) {
   }
 }
 
+// Returns the display name for a seat (falls back to "Player N" for offline play)
+function playerName(seat) {
+  return (G.playerNames && G.playerNames[seat]) || `Player ${seat+1}`;
+}
+
 // ══════════════════════════════════════════════════════
 //  RENDER GAME
 // ══════════════════════════════════════════════════════
@@ -855,16 +859,16 @@ function renderGame() {
 
   // Player labels & active highlight
   [0,1,2,3].forEach(p => {
-    const [name,,cls] = PLAYER_LABELS[p];
+    const [,,cls] = PLAYER_LABELS[p];
+    const pName = playerName(p);
     const lbl = document.getElementById(`lbl-${p}`);
-    lbl.textContent = (p===0||p===2) ? `${name} · Team ${p%2===0?1:2}` : `P${p+1}·T${p%2===0?1:2}`;
+    lbl.textContent = (p===0||p===2) ? `${pName} · Team ${p%2===0?1:2}` : `${pName}·T${p%2===0?1:2}`;
     lbl.className = `p-label ${cls}${p===cp?' ':''}`;
     document.getElementById(`zone-${p}`).classList.toggle('active', p===cp);
   });
 
   // Turn label
-  const [cpName] = PLAYER_LABELS[cp];
-  document.getElementById('turn-lbl').textContent = `${cpName}'s Turn (Team ${cp%2+1})`;
+  document.getElementById('turn-lbl').textContent = `${playerName(cp)}'s Turn (Team ${cp%2+1})`;
   document.getElementById('bid-disp').textContent = G.bidValue ? `Bid: ${rn(G.bidValue)} (${G.bidValue})` : '';
 
   // Captured pts
@@ -1933,15 +1937,15 @@ function subscribeGameState(gameId) {
   _stateRef = DB.ref(`games/${gameId}/gameState`);
   _stateRef.on('value', snap => {
     if (!snap.exists()) return;
-    G = snap.val();
-    // Restore JS arrays that Firebase turns into objects with numeric keys
-    G.hands        = fixArray(G.hands, 4, []);
-    G.floor        = fixArray(G.floor, null, []);
-    G.captured     = fixArray(G.captured, 2, []);
-    G.scores       = fixArray(G.scores, 2, 0);
-    G.seepBonus    = fixArray(G.seepBonus, 2, 0);
-    G.selFloorIdxs = fixArray(G.selFloorIdxs, null, []) || [];
-    if (G.selHandIdx === undefined) G.selHandIdx = null;
+    G = deepRestore(snap.val());
+    // Guarantee required arrays exist with correct length
+    if (!Array.isArray(G.hands)     || G.hands.length     !== 4) G.hands     = Array(4).fill([]);
+    if (!Array.isArray(G.captured)  || G.captured.length  !== 2) G.captured  = [[],[]];
+    if (!Array.isArray(G.scores)    || G.scores.length    !== 2) G.scores    = [0,0];
+    if (!Array.isArray(G.seepBonus) || G.seepBonus.length !== 2) G.seepBonus = [0,0];
+    if (!Array.isArray(G.floor))       G.floor        = [];
+    if (!Array.isArray(G.selFloorIdxs)) G.selFloorIdxs = [];
+    if (G.selHandIdx === undefined)    G.selHandIdx   = null;
     if (G.phase === 'bid') {
       showScreen('bid-screen');
       renderBidScreen();
@@ -1956,15 +1960,26 @@ function subscribeGameState(gameId) {
   });
 }
 
-// Firebase stores arrays as objects {0:…,1:…} when there are null entries
-function fixArray(val, size, fill) {
-  if (!val) return size ? Array(size).fill(fill) : [];
-  if (Array.isArray(val)) return val;
-  // Object with numeric keys → convert
-  const len = size || (Math.max(...Object.keys(val).map(Number)) + 1);
-  const arr = [];
-  for (let i = 0; i < len; i++) arr.push(val[i] !== undefined ? val[i] : fill);
-  return arr;
+// Recursively convert Firebase's numeric-keyed objects back to JS arrays.
+// Firebase strips empty arrays and turns array indices into object keys.
+// Card/house objects are safe because their keys are non-numeric strings.
+function deepRestore(val) {
+  if (val === null || val === undefined) return val;
+  if (typeof val !== 'object' || Array.isArray(val)) {
+    if (Array.isArray(val)) return val.map(deepRestore);
+    return val;
+  }
+  const keys = Object.keys(val);
+  const allNumeric = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+  if (allNumeric) {
+    const maxIdx = Math.max(...keys.map(Number));
+    const arr = [];
+    for (let i = 0; i <= maxIdx; i++) arr.push(deepRestore(val[i] !== undefined ? val[i] : null));
+    return arr;
+  }
+  const out = {};
+  for (const k of keys) out[k] = deepRestore(val[k]);
+  return out;
 }
 
 async function pushGameState() {
