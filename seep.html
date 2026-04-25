@@ -1091,30 +1091,51 @@ function ruleBreakHouse(ctx) {
 }
 
 // ── Rule: ADD TO HOUSE (reinforce / contribute to a house) ──
-// Own team's house   → keeps adding cards (Pucca flag only blocks opponents).
-//   - House owner must keep ≥1 card of house value in hand (key to capture later).
-//   - Partner (same team, different player) may add all their matching cards freely.
-// Opponent's house   → one-time share action; blocked once house is Pucca or Shared.
-// Shared             → always blocked.
+// Any player may reinforce a house by contributing cards summing to house value.
+// Key-card rule: you must keep ≥1 card of house value in hand if you are (or will
+// become) the key holder for your team's side of this house.
+//
+// Key holders per house:
+//   Team A side (builders): h.owner
+//   Team B side (first opponent to contribute): h.sharedBy (set on first B add)
+//
+// If your partner is already your team's key holder, you can add all cards freely.
 // Hand card + selected loose floor cards must sum to house value.
 function ruleAddToHouse(ctx) {
   if (ctx.selHouses.length !== 1)
     return {valid:false, reason:'Select a house to reinforce'};
   const h = ctx.selHouses[0];
-  if (h.shared)
-    return {valid:false, reason:'House is already shared and locked'};
-  // Opponents cannot add to a Pucca house; own team may keep reinforcing
-  if (h.pucca && h.team !== ctx.team)
-    return {valid:false, reason:'Cannot add to a Pucca house owned by the other team'};
+
   const contrib = ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
   if (contrib !== h.value)
     return {valid:false,
       reason:`Cards must total ${rn(h.value)} (${h.value}) to reinforce — yours total ${contrib}`};
-  // House owner must keep at least one card of house value in hand to capture it later
-  if (h.owner === ctx.player && !ctx.remainder.some(c => c.rank === h.value))
+
+  // Determine whether this player must keep a key card.
+  // Key holder for same-team side = h.owner; for opponent side = h.sharedBy.
+  const partner = (ctx.player + 2) % 4;
+  let needsKey;
+  if (ctx.team === h.team) {
+    // Own team: h.owner is the key holder
+    needsKey = (ctx.player === h.owner);   // partner of builder adds freely
+  } else {
+    // Opponent team
+    if (h.sharedBy === undefined) {
+      needsKey = true;                     // first from this team → becomes key holder
+    } else if (ctx.player === h.sharedBy) {
+      needsKey = true;                     // already the key holder
+    } else {
+      needsKey = false;                    // partner is the key holder → add freely
+    }
+  }
+
+  if (needsKey && !ctx.remainder.some(c => c.rank === h.value))
     return {valid:false,
-      reason:`Must keep a ${rn(h.value)} in hand — you need it to capture your own house`};
-  const label = h.team !== ctx.team ? `Share house of ${rn(h.value)}` : `Reinforce house of ${rn(h.value)}`;
+      reason:`Must keep a ${rn(h.value)} in hand — you need it to capture this house`};
+
+  const label = (!h.shared && h.team !== ctx.team)
+    ? `Share house of ${rn(h.value)}`
+    : `Reinforce house of ${rn(h.value)}`;
   return {valid:true, reason:label, meta:{houseVal:h.value}};
 }
 
@@ -1345,12 +1366,12 @@ function execBuild(val) {
   if (existing) {
     existing.cards.push(...allCards);
     if (existing.team !== team) {
-      existing.shared = true; // both teams contributed → locked house
+      if (!existing.shared) { existing.shared = true; existing.sharedBy = cp; }
       existing.pucca  = true;
     }
     mergeLooseIntoHouse(existing);
   } else {
-    const newHouse = {type:'house', cards:allCards, value:val, pucca:false, owner:cp, team, shared:false};
+    const newHouse = {type:'house', cards:allCards, value:val, pucca:false, owner:cp, team, shared:false, sharedBy:undefined};
     G.floor.push(newHouse);
     mergeLooseIntoHouse(newHouse);
   }
@@ -1375,7 +1396,7 @@ function execAdd() {
   house.cards.push(hc, ...looseIdxs.map(i => G.floor[i].card));
   const team = cp%2;
   if (house.team !== team) {
-    house.shared = true; // opponent house → now shared between both teams
+    if (!house.shared) { house.shared = true; house.sharedBy = cp; } // record first opponent contributor
   }
   house.pucca = true;
   G.hands[cp].splice(G.selHandIdx, 1);
