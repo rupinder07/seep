@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seep</title>
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -345,12 +349,54 @@ body {
 #gameover-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 22px; padding: 40px; }
 #gameover-screen h1 { font-size: 2.4rem; color: #ffd700; text-align: center; }
 #gameover-screen p  { color: #ccc; text-align: center; }
+
+/* ── Auth Screen ── */
+#auth-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 40px; }
+#auth-screen h1 { font-size: 2.6rem; color: #ffd700; letter-spacing: 4px; }
+#auth-screen p  { color: #aaa; }
+.auth-box { background: rgba(0,0,0,.35); border-radius: 14px; padding: 32px 40px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 360px; }
+.auth-box input { padding: 12px 16px; border-radius: 8px; border: 2px solid #3a7a5a; background: rgba(255,255,255,.08); color: #fff; font-size: 1.1rem; outline: none; }
+.auth-box input:focus { border-color: #ffd700; }
+.auth-box input::placeholder { color: #888; }
+
+/* ── Lobby Screen ── */
+#lobby-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 40px; }
+#lobby-screen h2 { color: #ffd700; font-size: 1.8rem; }
+.lobby-box { background: rgba(0,0,0,.35); border-radius: 14px; padding: 32px 40px; display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 400px; }
+.lobby-box .sep { color: #666; text-align: center; font-size: .9rem; }
+.join-row { display: flex; gap: 10px; }
+.join-row input { flex: 1; padding: 10px 14px; border-radius: 8px; border: 2px solid #3a7a5a; background: rgba(255,255,255,.08); color: #fff; font-size: 1rem; outline: none; letter-spacing: 2px; }
+.join-row input:focus { border-color: #ffd700; }
+#lobby-user { color: #aaa; font-size: .9rem; text-align: center; }
+#lobby-user span { color: #ffd700; font-weight: bold; }
+#lobby-signout { background: none; border: none; color: #888; cursor: pointer; font-size: .85rem; text-decoration: underline; margin-top: -8px; }
+#lobby-signout:hover { color: #ccc; }
+
+/* ── Room Screen ── */
+#room-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 20px; padding: 32px; }
+#room-screen h2 { color: #ffd700; font-size: 1.6rem; }
+.room-code-box { background: rgba(0,0,0,.45); border-radius: 12px; padding: 20px 36px; text-align: center; }
+.room-code-box .label { color: #aaa; font-size: .85rem; margin-bottom: 6px; }
+.room-code { font-size: 2.8rem; font-weight: bold; color: #ffd700; letter-spacing: 6px; cursor: pointer; }
+.room-code:hover::after { content: ' 📋'; font-size: 1.2rem; }
+.seat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 480px; }
+.seat-header { text-align: center; font-weight: bold; padding: 6px 0; border-radius: 6px; font-size: .85rem; letter-spacing: 1px; }
+.seat-header.t1 { background: rgba(66,133,244,.3); color: #80b3ff; }
+.seat-header.t2 { background: rgba(234,67,53,.3);  color: #ff9090; }
+.seat-slot { background: rgba(0,0,0,.3); border-radius: 10px; padding: 14px 12px; text-align: center; border: 2px solid transparent; transition: border .2s; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.seat-slot.taken { border-color: #3a7a5a; }
+.seat-slot.mine  { border-color: #ffd700; background: rgba(255,215,0,.1); }
+.seat-slot .seat-name { font-weight: bold; font-size: 1rem; }
+.seat-slot .seat-label { font-size: .75rem; color: #aaa; }
+.seat-slot button { padding: 6px 16px; border-radius: 6px; border: none; background: #3a7a5a; color: #fff; cursor: pointer; font-size: .9rem; }
+.seat-slot button:hover { background: #4a9a6a; }
+#room-status { color: #aaa; font-size: .9rem; text-align: center; }
 </style>
 </head>
 <body>
 
-<!-- ═════════ START SCREEN ═════════ -->
-<div id="start-screen" class="screen active">
+<!-- ═════════ START SCREEN (legacy – kept for solo/offline use) ═════════ -->
+<div id="start-screen" class="screen">
   <h1>♠ SEEP ♠</h1>
   <p style="color:#aaa">Classic 4-player card game from Punjab</p>
   <div class="start-team-box">
@@ -465,6 +511,47 @@ body {
   <button class="btn btn-primary" onclick="startGame()" style="font-size:1rem;padding:10px 28px">New Game</button>
 </div>
 
+<!-- ═════════ AUTH SCREEN ═════════ -->
+<div id="auth-screen" class="screen active">
+  <h1>♠ SEEP ♠</h1>
+  <p>Classic 4-player card game from Punjab</p>
+  <div class="auth-box">
+    <input id="auth-name" type="text" placeholder="Your display name" maxlength="20" autocomplete="off" />
+    <button class="btn btn-primary" onclick="signInAnon()" style="font-size:1.1rem;padding:12px 0">Play →</button>
+  </div>
+</div>
+
+<!-- ═════════ LOBBY SCREEN ═════════ -->
+<div id="lobby-screen" class="screen">
+  <h2>♠ SEEP ♠</h2>
+  <p id="lobby-user">Signed in as <span id="lobby-name-display"></span></p>
+  <div class="lobby-box">
+    <button class="btn btn-primary" onclick="startNewGame()" style="padding:12px 0;font-size:1rem">Start New Game</button>
+    <div class="sep">— or join an existing game —</div>
+    <div class="join-row">
+      <input id="join-code-input" type="text" placeholder="6-digit code" maxlength="6" autocomplete="off" />
+      <button class="btn btn-primary" onclick="joinGame()" style="padding:10px 18px">Join</button>
+    </div>
+  </div>
+  <button id="lobby-signout" onclick="signOutPlayer()">Sign out</button>
+</div>
+
+<!-- ═════════ ROOM SCREEN ═════════ -->
+<div id="room-screen" class="screen">
+  <h2>Game Room</h2>
+  <div class="room-code-box">
+    <div class="label">Share this code</div>
+    <div class="room-code" id="room-code-display" onclick="copyCode()" title="Click to copy">------</div>
+  </div>
+  <div class="seat-grid" id="seat-grid">
+    <div class="seat-header t1">Team 1 (Blue)</div>
+    <div class="seat-header t2">Team 2 (Red)</div>
+    <!-- Seat slots injected by renderRoomScreen() -->
+  </div>
+  <div id="room-status">Waiting for players…</div>
+  <button id="room-start-btn" class="btn btn-primary" onclick="hostStartGame()" style="display:none;padding:12px 36px;font-size:1rem">Start Game ▶</button>
+</div>
+
 <!-- Seep Overlay -->
 <div id="seep-overlay">
   <h1>SEEP!</h1>
@@ -481,6 +568,29 @@ body {
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════
+//  FIREBASE CONFIG  (paste your project values here)
+// ══════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "PASTE_HERE",
+  authDomain:        "PASTE_HERE",
+  databaseURL:       "PASTE_HERE",
+  projectId:         "PASTE_HERE",
+  storageBucket:     "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId:             "PASTE_HERE",
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const DB = firebase.database();
+
+// ── Multiplayer globals ──
+let localUid      = null;   // this browser's anonymous Firebase UID
+let localName     = '';     // display name chosen at login
+let currentGameId = null;   // 6-digit game-room ID
+let localSeat     = null;   // 0-3 assigned seat
+let _roomRef      = null;   // Firebase ref for room listener cleanup
+let _stateRef     = null;   // Firebase ref for gameState listener cleanup
+
 // ══════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
 // ══════════════════════════════════════════════════════
@@ -625,9 +735,20 @@ function showBidScreen() {
 }
 
 function renderBidScreen() {
+  const isBidder = (localSeat === null || localSeat === G.bidder);
   const hand   = G.hands[G.bidder];
   const maxRnk = Math.max(...hand.map(c=>c.rank));
   const canBid = maxRnk >= 9;
+
+  // Non-bidder: show waiting message, hide buttons
+  if (!isBidder) {
+    const pName = (G.playerNames && G.playerNames[G.bidder]) || `Player ${G.bidder+1}`;
+    document.getElementById('bid-instr').textContent = `Waiting for ${pName} to bid…`;
+    document.getElementById('bid-hand-area').innerHTML = '';
+    document.getElementById('bid-btn-area').innerHTML = '';
+    document.getElementById('bid-hint').textContent = '';
+    return;
+  }
 
   // Can pass if highest is exactly a non-spade 9
   const has9Spade = hand.some(c=>c.rank===9&&c.suit==='S');
@@ -674,7 +795,11 @@ function reDealBid() {
   G.deck = shuffle(initDeck());
   G.hands[G.bidder] = G.deck.splice(0,4);
   sortHand(G.hands[G.bidder]);
-  renderBidScreen();
+  if (currentGameId) {
+    pushGameState();
+  } else {
+    renderBidScreen();
+  }
 }
 
 function dealRemainingCards() {
@@ -695,8 +820,12 @@ function confirmBid(value) {
   // Deal only the 4 floor cards; remaining hands dealt after bidder's first move
   G.floor = G.deck.splice(0,4).map(c=>({type:'card',card:c}));
   G.phase = 'play';
-  showScreen('game-screen');
-  renderGame();
+  if (currentGameId) {
+    pushGameState();  // all clients transition via listener
+  } else {
+    showScreen('game-screen');
+    renderGame();
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -780,16 +909,18 @@ function renderPlayerHand(p) {
   if (count > 0) container.appendChild(makeHiddenPile(count));
 }
 
-// Full-width row below the table: shows the current player's cards face-up.
-// This is the same layout for every seat so P2/P4 see the same wrapping grid as P1/P3.
+// Full-width row below the table: shows the local player's cards face-up (multiplayer)
+// or the current player's cards (single-device mode).
 function renderActiveHand() {
-  const cp   = G.currentPlayer;
+  const viewSeat = (localSeat !== null) ? localSeat : G.currentPlayer;
+  const isMyTurn = (localSeat === null) || (localSeat === G.currentPlayer);
   const zone = document.getElementById('active-hand-zone');
   zone.innerHTML = '';
-  G.hands[cp].forEach((card, idx) => {
+  G.hands[viewSeat].forEach((card, idx) => {
     const sel = G.selHandIdx === idx;
-    const el  = makeCard(card, true, sel);
-    el.onclick = () => selectHandCard(idx);
+    const el  = makeCard(card, isMyTurn, sel);
+    if (isMyTurn) el.onclick = () => selectHandCard(idx);
+    else el.style.cursor = 'default';
     zone.appendChild(el);
   });
 }
@@ -912,6 +1043,7 @@ function closePeek() {
 //  SELECTION
 // ══════════════════════════════════════════════════════
 function selectHandCard(idx) {
+  if (localSeat !== null && localSeat !== G.currentPlayer) return;
   G.selHandIdx = (G.selHandIdx===idx) ? null : idx;
   G.selFloorIdxs = [];
   renderActiveHand(); // only the active hand highlight changes
@@ -920,6 +1052,7 @@ function selectHandCard(idx) {
 }
 
 function toggleFloor(idx) {
+  if (localSeat !== null && localSeat !== G.currentPlayer) return;
   const i = G.selFloorIdxs.indexOf(idx);
   if (i===-1) G.selFloorIdxs.push(idx);
   else        G.selFloorIdxs.splice(i,1);
@@ -1334,6 +1467,7 @@ function updateActions() {
 //  ACTIONS
 // ══════════════════════════════════════════════════════
 function doAction(type) {
+  if (localSeat !== null && localSeat !== G.currentPlayer) return;
   const a = computeActions();
   if (type==='pick'  && !a.pick)  return;
   if (type==='seep'  && !a.seep)  return;
@@ -1469,7 +1603,11 @@ function advanceTurn() {
   let t=0;
   while(G.hands[G.currentPlayer].length===0 && t++<4)
     G.currentPlayer=(G.currentPlayer+1)%4;
-  renderGame();
+  if (currentGameId) {
+    pushGameState();  // broadcast to all clients; they each call renderGame() via listener
+  } else {
+    renderGame();
+  }
 }
 
 function showSeepOverlay(team, pts, cb) {
@@ -1493,7 +1631,14 @@ function endRound() {
   const s1 = G.captured[1].reduce((s,c)=>s+cardPts(c),0) + G.seepBonus[1];
   G.scores[0]+=s0; G.scores[1]+=s1;
 
-  showRoundEnd(s0, s1);
+  G.phase = (G.scores[0]>=WIN_SCORE||G.scores[1]>=WIN_SCORE) ? 'gameover' : 'roundend';
+  G._roundS0 = s0; G._roundS1 = s1;
+
+  if (currentGameId) {
+    pushGameState();
+  } else {
+    showRoundEnd(s0, s1);
+  }
 }
 
 function showRoundEnd(s0, s1) {
@@ -1533,6 +1678,8 @@ function ptsFilter(team, pred) {
 }
 
 function nextRound() {
+  // In multiplayer only the current bidder (who just finished the round) drives next round
+  if (currentGameId && localSeat !== G.bidder) return;
   G.roundNum++;
   G.deck       = shuffle(initDeck());
   G.hands      = [[],[],[],[]];
@@ -1548,7 +1695,11 @@ function nextRound() {
   G.selHandIdx = null; G.selFloorIdxs=[];
   G.hands[G.bidder] = G.deck.splice(0,4);
   sortHand(G.hands[G.bidder]);
-  showBidScreen();
+  if (currentGameId) {
+    pushGameState();
+  } else {
+    showBidScreen();
+  }
 }
 
 function showGameOver() {
@@ -1556,7 +1707,317 @@ function showGameOver() {
   const w = G.scores[0]>G.scores[1] ? 'Team 1 (P1 & P3)' : G.scores[1]>G.scores[0] ? 'Team 2 (P2 & P4)' : 'Both Teams (Tie!)';
   document.getElementById('go-title').textContent  = `🏆 ${w} Wins!`;
   document.getElementById('go-scores').textContent = `Team 1: ${G.scores[0]} pts  |  Team 2: ${G.scores[1]} pts`;
+  // In multiplayer, "New Game" goes back to lobby
+  const btn = document.querySelector('#gameover-screen .btn');
+  if (currentGameId && btn) {
+    btn.textContent = 'Back to Lobby';
+    btn.onclick = () => {
+      localStorage.removeItem('seep_gameId');
+      currentGameId = null; localSeat = null;
+      unsubscribeAll();
+      showScreen('lobby-screen');
+    };
+  } else if (btn) {
+    btn.textContent = 'New Game';
+    btn.onclick = startGame;
+  }
 }
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER – AUTH
+// ══════════════════════════════════════════════════════
+async function signInAnon() {
+  const nameInput = document.getElementById('auth-name');
+  const name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+  try {
+    // Sign in anonymously; UID persists in IndexedDB across refreshes
+    const cred = await firebase.auth().signInAnonymously();
+    localUid  = cred.user.uid;
+    localName = name;
+    localStorage.setItem('seep_name', name);
+    // If mid-game session, try to rejoin
+    const savedGame = localStorage.getItem('seep_gameId');
+    if (savedGame) {
+      const snap = await DB.ref(`games/${savedGame}`).once('value');
+      if (snap.exists()) {
+        const d = snap.val();
+        const mySeat = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
+        if (mySeat !== -1) {
+          currentGameId = savedGame;
+          localSeat     = mySeat;
+          document.getElementById('lobby-name-display').textContent = localName;
+          subscribeRoom(currentGameId);
+          showScreen('room-screen');
+          return;
+        }
+      }
+    }
+    document.getElementById('lobby-name-display').textContent = localName;
+    showScreen('lobby-screen');
+  } catch(e) {
+    alert('Sign-in failed: ' + e.message);
+  }
+}
+
+function signOutPlayer() {
+  firebase.auth().signOut();
+  localUid = null; localName = ''; currentGameId = null; localSeat = null;
+  localStorage.removeItem('seep_gameId');
+  unsubscribeAll();
+  showScreen('auth-screen');
+}
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER – LOBBY
+// ══════════════════════════════════════════════════════
+async function startNewGame() {
+  const id = Math.floor(100000 + Math.random() * 900000).toString();
+  const seatMap = [null, null, null, null];
+  seatMap[0] = localUid;  // host takes seat 0
+  localSeat = 0;
+  currentGameId = id;
+  localStorage.setItem('seep_gameId', id);
+  await DB.ref(`games/${id}`).set({
+    status: 'lobby',
+    hostUid: localUid,
+    createdAt: Date.now(),
+    seatMap,
+    names: { [localUid]: localName },
+    gameState: null,
+  });
+  subscribeRoom(id);
+  showScreen('room-screen');
+}
+
+async function joinGame() {
+  const code = document.getElementById('join-code-input').value.trim();
+  if (code.length !== 6) { alert('Enter a valid 6-digit code'); return; }
+  const snap = await DB.ref(`games/${code}`).once('value');
+  if (!snap.exists()) { alert('Room not found'); return; }
+  const d = snap.val();
+  if (d.status !== 'lobby') { alert('This game has already started'); return; }
+  // Check if already in the room
+  const existing = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
+  if (existing !== -1) {
+    localSeat = existing;
+  }
+  currentGameId = code;
+  localStorage.setItem('seep_gameId', code);
+  // Ensure our name is in the names map
+  await DB.ref(`games/${code}/names/${localUid}`).set(localName);
+  subscribeRoom(code);
+  showScreen('room-screen');
+}
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER – ROOM
+// ══════════════════════════════════════════════════════
+function subscribeRoom(gameId) {
+  unsubscribeAll();
+  _roomRef = DB.ref(`games/${gameId}`);
+  _roomRef.on('value', snap => {
+    if (!snap.exists()) return;
+    const d = snap.val();
+    if (d.status === 'bid' || d.status === 'playing') {
+      // Game started — subscribe to game state
+      _roomRef.off('value');
+      _roomRef = null;
+      subscribeGameState(gameId);
+      // Restore local seat in case of reconnect
+      if (localSeat === null && d.seatMap) {
+        localSeat = d.seatMap.indexOf(localUid);
+      }
+      return;
+    }
+    renderRoomScreen(d);
+  });
+}
+
+function renderRoomScreen(d) {
+  const seatMap  = d.seatMap  || [null,null,null,null];
+  const names    = d.names    || {};
+  const isHost   = d.hostUid === localUid;
+  const allFull  = seatMap.every(s => s !== null);
+
+  document.getElementById('room-code-display').textContent = currentGameId;
+
+  // Seat grid: layout  [0,1] top row, [2,3] bottom row
+  // Team 1 = col 0 (seats 0,2), Team 2 = col 1 (seats 1,3)
+  const grid = document.getElementById('seat-grid');
+  // Remove old seat slots (keep first 2 header divs)
+  while (grid.children.length > 2) grid.removeChild(grid.lastChild);
+
+  const SEAT_LABELS = ['Player 1 (T1)', 'Player 2 (T2)', 'Player 3 (T1)', 'Player 4 (T2)'];
+  // Order in grid: seats 0,1 then seats 2,3 (col 0 = T1, col 1 = T2)
+  [0,1,2,3].forEach(seat => {
+    const uid  = seatMap[seat];
+    const isMine = uid === localUid;
+    const slot = document.createElement('div');
+    slot.className = 'seat-slot' + (uid ? ' taken' : '') + (isMine ? ' mine' : '');
+    if (uid) {
+      slot.innerHTML = `<div class="seat-name">${names[uid] || 'Player'}</div><div class="seat-label">${SEAT_LABELS[seat]}</div>`;
+    } else {
+      const canTake = !seatMap.includes(localUid);  // haven't sat yet
+      if (canTake) {
+        const btn = document.createElement('button');
+        btn.textContent = 'Take seat';
+        btn.onclick = () => takeSeat(seat);
+        slot.innerHTML = `<div class="seat-label">${SEAT_LABELS[seat]}</div>`;
+        slot.appendChild(btn);
+      } else {
+        slot.innerHTML = `<div class="seat-label">${SEAT_LABELS[seat]}</div><div style="color:#555;font-size:.85rem">Empty</div>`;
+      }
+    }
+    grid.appendChild(slot);
+  });
+
+  const status = document.getElementById('room-status');
+  const startBtn = document.getElementById('room-start-btn');
+  if (isHost) {
+    status.textContent = allFull ? 'All seats filled! Start the game.' : `Waiting for players… (${seatMap.filter(Boolean).length}/4)`;
+    startBtn.style.display = allFull ? 'inline-block' : 'none';
+  } else {
+    status.textContent = 'Waiting for host to start…';
+    startBtn.style.display = 'none';
+  }
+}
+
+async function takeSeat(seatIdx) {
+  // Use a transaction to atomically claim the seat
+  const ref = DB.ref(`games/${currentGameId}/seatMap/${seatIdx}`);
+  const { committed } = await ref.transaction(current => {
+    if (current !== null) return; // already taken — abort
+    return localUid;
+  });
+  if (committed) {
+    localSeat = seatIdx;
+    await DB.ref(`games/${currentGameId}/names/${localUid}`).set(localName);
+    // Set up disconnect cleanup
+    ref.onDisconnect().set(null);
+  } else {
+    alert('That seat was just taken. Please choose another.');
+  }
+}
+
+async function hostStartGame() {
+  const snap = await DB.ref(`games/${currentGameId}`).once('value');
+  const d = snap.val();
+  if (!d || d.seatMap.some(s => s === null)) { alert('All 4 seats must be filled'); return; }
+  // Init game state
+  G = freshState();
+  G.hands[G.bidder] = G.deck.splice(0,4);
+  sortHand(G.hands[G.bidder]);
+  // Store names indexed by seat
+  G.playerNames = d.seatMap.map(uid => d.names[uid] || `Player ${d.seatMap.indexOf(uid)+1}`);
+  await DB.ref(`games/${currentGameId}`).update({
+    status: 'bid',
+    gameState: sanitise(G),
+  });
+  // All clients pick this up via subscribeGameState
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(currentGameId).then(() => {
+    const el = document.getElementById('room-code-display');
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => { el.textContent = orig; }, 1200);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER – GAME STATE SYNC
+// ══════════════════════════════════════════════════════
+function subscribeGameState(gameId) {
+  _stateRef = DB.ref(`games/${gameId}/gameState`);
+  _stateRef.on('value', snap => {
+    if (!snap.exists()) return;
+    G = snap.val();
+    // Restore JS arrays that Firebase turns into objects with numeric keys
+    G.hands        = fixArray(G.hands, 4, []);
+    G.floor        = fixArray(G.floor, null, []);
+    G.captured     = fixArray(G.captured, 2, []);
+    G.scores       = fixArray(G.scores, 2, 0);
+    G.seepBonus    = fixArray(G.seepBonus, 2, 0);
+    G.selFloorIdxs = fixArray(G.selFloorIdxs, null, []) || [];
+    if (G.selHandIdx === undefined) G.selHandIdx = null;
+    if (G.phase === 'bid') {
+      showScreen('bid-screen');
+      renderBidScreen();
+    } else if (G.phase === 'play') {
+      showScreen('game-screen');
+      renderGame();
+    } else if (G.phase === 'roundend') {
+      showRoundEnd(G._roundS0 || 0, G._roundS1 || 0);
+    } else if (G.phase === 'gameover') {
+      showGameOver();
+    }
+  });
+}
+
+// Firebase stores arrays as objects {0:…,1:…} when there are null entries
+function fixArray(val, size, fill) {
+  if (!val) return size ? Array(size).fill(fill) : [];
+  if (Array.isArray(val)) return val;
+  // Object with numeric keys → convert
+  const len = size || (Math.max(...Object.keys(val).map(Number)) + 1);
+  const arr = [];
+  for (let i = 0; i < len; i++) arr.push(val[i] !== undefined ? val[i] : fill);
+  return arr;
+}
+
+async function pushGameState() {
+  if (!currentGameId) return;
+  const slim = Object.assign({}, G, { selHandIdx: null, selFloorIdxs: [] });
+  await DB.ref(`games/${currentGameId}/gameState`).set(sanitise(slim));
+}
+
+function sanitise(obj) {
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitise);
+  const out = {};
+  for (const k of Object.keys(obj)) out[k] = sanitise(obj[k]);
+  return out;
+}
+
+function unsubscribeAll() {
+  if (_roomRef)  { _roomRef.off();  _roomRef  = null; }
+  if (_stateRef) { _stateRef.off(); _stateRef = null; }
+}
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER – PAGE LOAD / RECONNECT
+// ══════════════════════════════════════════════════════
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    localUid  = user.uid;
+    localName = localStorage.getItem('seep_name') || '';
+    if (localName) {
+      document.getElementById('lobby-name-display').textContent = localName;
+      const savedGame = localStorage.getItem('seep_gameId');
+      if (savedGame) {
+        currentGameId = savedGame;
+        DB.ref(`games/${savedGame}`).once('value').then(snap => {
+          if (!snap.exists()) { showScreen('lobby-screen'); return; }
+          const d = snap.val();
+          const mySeat = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
+          if (mySeat !== -1) { localSeat = mySeat; }
+          if (d.status === 'lobby') {
+            subscribeRoom(savedGame);
+            showScreen('room-screen');
+          } else {
+            subscribeGameState(savedGame);
+          }
+        });
+      } else {
+        showScreen('lobby-screen');
+      }
+    }
+    // else: auth-screen stays visible, user needs to enter name
+  }
+});
 </script>
 </body>
 </html>
