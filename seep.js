@@ -1,581 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seep</title>
-<!-- Firebase compat SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'Georgia', serif;
-  background: #1a4a2e;
-  color: #fff;
-  min-height: 100vh;
-  user-select: none;
-}
-
-/* ── Screens ── */
-.screen { display: none; }
-.screen.active { display: flex; flex-direction: column; }
-
-/* ── Start Screen ── */
-#start-screen {
-  align-items: center; justify-content: center;
-  height: 100vh; gap: 20px; padding: 40px;
-  background: #0e2a1a;
-}
-#start-screen h1 { font-size: 3.5rem; letter-spacing: 6px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,.4); }
-.start-team-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 16px 32px; text-align: center; }
-.start-team-box h3 { color: #ffd700; margin-bottom: 6px; }
-.start-team-box p { color: #ccc; font-size: .9rem; }
-
-/* ── Bid Screen ── */
-#bid-screen {
-  align-items: center; justify-content: center;
-  height: 100vh; gap: 18px; padding: 24px;
-  background: #0a2218;
-}
-#bid-screen h2 { color: #ffd700; font-size: 1.8rem; }
-#bid-screen p  { color: #ccc; font-size: .9rem; text-align: center; max-width: 380px; }
-.bid-hand  { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.bid-btns  { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
-.bid-btn   { background: #1e5c32; color: #fff; border: 2px solid #3a8a4e; padding: 10px 18px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
-.bid-btn:hover { background: #2a7a42; }
-.bid-btn.pass  { background: #5a2a18; border-color: #8a4a28; }
-.bid-btn.pass:hover { background: #7a3a20; }
-
-/* ══════════════════════════════════════
-   GAME SCREEN  –  4-player table
-══════════════════════════════════════ */
-#game-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 16px;
-}
-
-/* ── Header ── */
-.g-header {
-  background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; gap: 8px; width: 100%;
-}
-.g-header h1 { font-size: 1.1rem; letter-spacing: 3px; color: #ffd700; }
-.g-scores { display: flex; gap: 12px; }
-.g-score  { font-size: .8rem; padding: 3px 12px; border-radius: 6px; background: rgba(255,255,255,.1); }
-.g-score.winning { background: rgba(255,215,0,.25); color: #ffd700; }
-.g-round  { font-size: .75rem; color: #888; }
-
-/* ── Table ── */
-.g-table {
-  display: grid;
-  grid-template-areas:
-    ". p3 ."
-    "p2 floor p4"
-    ". p1 .";
-  grid-template-columns: 120px 380px 120px;
-  grid-template-rows: auto auto auto;
-  gap: 8px;
-  padding: 10px 6px;
-}
-
-/* ── Player zones ── */
-.player-zone {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 6px; padding: 6px;
-  border-radius: 10px; border: 2px solid transparent;
-  transition: border-color .2s;
-}
-.player-zone.active {
-  border-color: #ffd700;
-  background: rgba(255,215,0,.06);
-}
-.player-zone .p-label {
-  font-size: .7rem; color: #8a9a8a; letter-spacing: 1px; white-space: nowrap;
-}
-.player-zone .p-label.t0 { color: #5ab0ff; }
-.player-zone .p-label.t1 { color: #ff9090; }
-
-.player-zone.top    { grid-area: p3; }
-.player-zone.bottom { grid-area: p1; }
-.player-zone.left   { grid-area: p2; }
-.player-zone.right  { grid-area: p4; }
-
-.cards-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-
-/* ── Active player hand: full-width row below table, same view for all seats ── */
-.active-hand-zone {
-  width: 100%;
-  background: rgba(0,0,0,.25);
-  border-top: 1px solid rgba(255,255,255,.07);
-  border-bottom: 1px solid rgba(255,255,255,.07);
-  padding: 10px 14px 8px;
-  display: flex; flex-wrap: wrap; gap: 6px;
-  justify-content: center; align-items: flex-end;
-  min-height: 60px;
-}
-
-/* ── Hidden pile ── */
-.hidden-pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.pile-stack  { position: relative; width: 54px; height: 76px; }
-.card.face-down {
-  background: linear-gradient(145deg, #1a3a7a, #0a1a4a);
-  border-color: #3a5aaa; color: transparent; cursor: default;
-}
-.card.face-down::after {
-  content: ''; position: absolute; inset: 4px;
-  border: 1.5px solid rgba(255,255,255,.15); border-radius: 4px;
-}
-.card.face-down:hover { transform: none; box-shadow: none; }
-.pile-label { font-size: .7rem; color: #7a9a7a; }
-
-/* ── Floor zone ── */
-.floor-zone {
-  grid-area: floor;
-  background: rgba(0,0,0,.3);
-  border-radius: 14px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 6px; padding: 10px 8px;
-  min-height: 130px;
-}
-.floor-label { font-size: .65rem; color: #5a8a5a; letter-spacing: 2px; }
-.floor-cards { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center; min-height: 60px; }
-.floor-empty { color: #3a6a3a; font-style: italic; font-size: .85rem; }
-.cap-row { display: flex; gap: 16px; font-size: .7rem; color: #7a8a7a; }
-.cap-row span { color: #ffd700; }
-
-/* ── Floor cards slightly smaller than hand cards ── */
-.card.floor-card { width: 54px; height: 76px; }
-.card.floor-card .rank { font-size: 1rem; }
-.card.floor-card .suit { font-size: .95rem; }
-.card.floor-card .c-tl, .card.floor-card .c-br { font-size: .6rem; }
-
-/* ── Action area ── */
-.g-actions {
-  background: rgba(0,0,0,.4);
-  padding: 10px 14px;
-  display: flex; flex-direction: column; align-items: center; gap: 7px;
-  width: 100%;
-}
-.turn-label { font-size: .9rem; color: #ffd700; letter-spacing: 1px; }
-.bid-disp   { font-size: .75rem; color: #ffaa44; min-height: 1em; }
-.action-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.status-msg  { font-size: .78rem; color: #999; min-height: 1em; text-align: center; }
-
-/* ══════════════════════════════════════
-   CARDS
-══════════════════════════════════════ */
-.card {
-  width: 74px; height: 105px;
-  background: #fff; color: #111; border-radius: 9px; border: 2px solid #ccc;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; position: relative; flex-shrink: 0;
-  transition: transform .12s, box-shadow .12s;
-}
-.card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.5); }
-.card.red { color: #cc0000; }
-.card.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 0 3px #ffd700, 0 6px 18px rgba(255,215,0,.4);
-  transform: translateY(-8px);
-}
-.card .rank  { font-size: 1.45rem; font-weight: bold; line-height: 1.1; }
-.card .suit  { font-size: 1.35rem; line-height: 1; }
-.card .c-tl  { position: absolute; top: 4px; left: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; }
-.card .c-br  { position: absolute; bottom: 4px; right: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; transform: rotate(180deg); }
-
-/* ── House (doubled or pucca) ── */
-.house {
-  width: 60px; min-height: 80px;
-  background: linear-gradient(145deg, #1e4a2e, #0e2a18);
-  border-radius: 8px; border: 2px solid #3a7a4a;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; position: relative; flex-shrink: 0;
-  gap: 2px; padding: 6px 4px;
-  transition: transform .12s, box-shadow .12s;
-}
-.house:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.5); }
-.house.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 0 3px #ffd700;
-  transform: translateY(-7px);
-}
-/* Doubled house: double-line border */
-.house.doubled {
-  border: 3px double #ffd700;
-  background: linear-gradient(145deg, #1e4a2e, #122a1a);
-}
-.house.pucca { border-color: #ff8c00; border-width: 3px; }
-.house.pucca::after {
-  content: '★'; position: absolute; top: -10px; right: -6px;
-  color: #ff8c00; font-size: .85rem;
-}
-/* Shared house: both teams contributed — purple double border */
-.house.shared {
-  border: 3px double #cc88ff;
-  background: linear-gradient(145deg, #2e1a4e, #1a0a30);
-}
-.house.shared::after {
-  content: '⚑'; position: absolute; top: -10px; right: -6px;
-  color: #cc88ff; font-size: .85rem;
-}
-.house .h-badge.shared { background: #3a1a5a; color: #cc88ff; }
-.house .h-val   { font-size: 1.6rem; font-weight: bold; color: #ffd700; }
-.house .h-badge { font-size: .6rem; padding: 1px 5px; border-radius: 4px; }
-.house .h-badge.t0 { background: #1a3a6a; color: #7aacff; }
-.house .h-badge.t1 { background: #5a1a1a; color: #ffaaaa; }
-.house .h-count { font-size: .58rem; color: #5a8a5a; }
-
-/* ── Undoubled house: shown as pile of cards ── */
-.house-pile {
-  position: relative;
-  width: 58px; height: 90px;
-  cursor: pointer; flex-shrink: 0;
-  transition: transform .12s;
-}
-.house-pile:hover { transform: translateY(-4px); }
-.house-pile.selected .pile-mini-card { box-shadow: 0 0 0 2px #ffd700 !important; }
-.pile-mini-card {
-  position: absolute;
-  width: 46px; height: 34px;
-  background: #fff; color: #111;
-  border-radius: 5px; border: 1.5px solid #bbb;
-  display: flex; align-items: center; justify-content: center;
-  gap: 3px; font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0,0,0,.35);
-}
-.pile-mini-card.red { color: #cc0000; }
-.pmc-rank { font-size: .78rem; line-height: 1; }
-.pmc-suit { font-size: .72rem; line-height: 1; }
-.h-pile-badge {
-  position: absolute;
-  bottom: 0; right: -2px;
-  font-size: .58rem; font-weight: bold;
-  padding: 2px 5px; border-radius: 4px;
-  z-index: 20; white-space: nowrap;
-}
-.h-pile-badge.t0 { background: #1a3a6a; color: #7aacff; }
-.h-pile-badge.t1 { background: #5a1a1a; color: #ffaaaa; }
-
-/* ── Peek button (appears on hover) ── */
-.house-peek-btn {
-  position: absolute;
-  top: 2px; left: 2px;
-  background: rgba(0,0,0,.55);
-  border: none; color: #ddd;
-  border-radius: 4px; font-size: .6rem;
-  padding: 2px 4px; cursor: pointer;
-  opacity: 0; transition: opacity .15s;
-  z-index: 30; line-height: 1;
-}
-.house:hover .house-peek-btn,
-.house-pile:hover .house-peek-btn { opacity: 1; }
-
-/* ── House Peek Modal ── */
-#house-peek {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.72); z-index: 200;
-  align-items: center; justify-content: center;
-}
-#house-peek.show { display: flex; }
-#peek-content {
-  background: #162e1e; border: 2px solid #3a8a4e;
-  border-radius: 14px; padding: 18px 22px;
-  max-width: 92vw; display: flex; flex-direction: column;
-  align-items: center; gap: 14px;
-}
-#peek-title { color: #ffd700; font-size: .95rem; text-align: center; }
-#peek-cards { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.peek-close-btn {
-  background: #3a3a3a; color: #ccc; border: 1px solid #666;
-  border-radius: 6px; padding: 6px 20px; cursor: pointer;
-  font-size: .82rem; font-family: inherit;
-}
-.peek-close-btn:hover { background: #555; }
-
-/* ══════════════════════════════════════
-   ACTION BUTTONS  (always visible)
-══════════════════════════════════════ */
-.btn {
-  padding: 8px 16px; border-radius: 8px; border: none;
-  font-size: .82rem; font-family: inherit; cursor: pointer;
-  font-weight: bold; transition: opacity .15s, transform .1s, box-shadow .1s;
-  min-width: 76px; text-align: center;
-}
-.btn:disabled { opacity: .32; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-.btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
-
-.btn-pick    { background: #1e6a2e; color: #fff; border: 1px solid #3aaa4e; }
-.btn-seep    { background: #6a1e6a; color: #fff; border: 1px solid #aa3aaa; }
-.btn-build   { background: #1e3a7a; color: #fff; border: 1px solid #3a6aaa; }
-.btn-add     { background: #7a4a00; color: #fff; border: 1px solid #c07820; }
-.btn-throw   { background: #3a3a3a; color: #ccc; border: 1px solid #666; }
-.btn-primary { background: #ffd700; color: #000; }
-
-/* ── Seep overlay ── */
-#seep-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.82); z-index: 100;
-  align-items: center; justify-content: center; flex-direction: column; gap: 14px;
-}
-#seep-overlay.show { display: flex; }
-#seep-overlay h1 { font-size: 4rem; color: #ffd700; animation: pulse .5s infinite alternate; }
-#seep-overlay p  { font-size: 1.4rem; color: #fff; }
-@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
-
-/* ── Round End ── */
-#roundend-screen {
-  align-items: center; justify-content: flex-start;
-  min-height: 100vh; padding: 28px 20px; gap: 14px; overflow-y: auto;
-}
-#roundend-screen h2 { font-size: 1.6rem; color: #ffd700; }
-.score-table { width: 100%; max-width: 480px; border-collapse: collapse; font-size: .88rem; }
-.score-table th, .score-table td { padding: 7px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.1); }
-.score-table th { color: #ffd700; background: rgba(0,0,0,.3); }
-.score-table td:nth-child(2), .score-table td:nth-child(3) { text-align: right; }
-.score-total td { font-weight: bold; color: #ffd700; }
-.cum-box { background: rgba(0,0,0,.3); border-radius: 12px; padding: 14px 28px; text-align: center; width: 100%; max-width: 480px; }
-.cum-box h3 { color: #ffd700; margin-bottom: 8px; }
-.cum-vals { display: flex; gap: 28px; justify-content: center; font-size: 1.2rem; }
-
-/* ── Game Over ── */
-#gameover-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 22px; padding: 40px; }
-#gameover-screen h1 { font-size: 2.4rem; color: #ffd700; text-align: center; }
-#gameover-screen p  { color: #ccc; text-align: center; }
-
-/* ── Auth Screen ── */
-#auth-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 40px; }
-#auth-screen h1 { font-size: 2.6rem; color: #ffd700; letter-spacing: 4px; }
-#auth-screen p  { color: #aaa; }
-.auth-box { background: rgba(0,0,0,.35); border-radius: 14px; padding: 32px 40px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 360px; }
-.auth-box input { padding: 12px 16px; border-radius: 8px; border: 2px solid #3a7a5a; background: rgba(255,255,255,.08); color: #fff; font-size: 1.1rem; outline: none; }
-.auth-box input:focus { border-color: #ffd700; }
-.auth-box input::placeholder { color: #888; }
-
-/* ── Lobby Screen ── */
-#lobby-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 40px; }
-#lobby-screen h2 { color: #ffd700; font-size: 1.8rem; }
-.lobby-box { background: rgba(0,0,0,.35); border-radius: 14px; padding: 32px 40px; display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 400px; }
-.lobby-box .sep { color: #666; text-align: center; font-size: .9rem; }
-.join-row { display: flex; gap: 10px; }
-.join-row input { flex: 1; padding: 10px 14px; border-radius: 8px; border: 2px solid #3a7a5a; background: rgba(255,255,255,.08); color: #fff; font-size: 1rem; outline: none; letter-spacing: 2px; }
-.join-row input:focus { border-color: #ffd700; }
-#lobby-user { color: #aaa; font-size: .9rem; text-align: center; }
-#lobby-user span { color: #ffd700; font-weight: bold; }
-#lobby-signout { background: none; border: none; color: #888; cursor: pointer; font-size: .85rem; text-decoration: underline; margin-top: -8px; }
-#lobby-signout:hover { color: #ccc; }
-
-/* ── Room Screen ── */
-#room-screen { align-items: center; justify-content: center; min-height: 100vh; gap: 20px; padding: 32px; }
-#room-screen h2 { color: #ffd700; font-size: 1.6rem; }
-.room-code-box { background: rgba(0,0,0,.45); border-radius: 12px; padding: 20px 36px; text-align: center; }
-.room-code-box .label { color: #aaa; font-size: .85rem; margin-bottom: 6px; }
-.room-code { font-size: 2.8rem; font-weight: bold; color: #ffd700; letter-spacing: 6px; cursor: pointer; }
-.room-code:hover::after { content: ' 📋'; font-size: 1.2rem; }
-.seat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 480px; }
-.seat-header { text-align: center; font-weight: bold; padding: 6px 0; border-radius: 6px; font-size: .85rem; letter-spacing: 1px; }
-.seat-header.t1 { background: rgba(66,133,244,.3); color: #80b3ff; }
-.seat-header.t2 { background: rgba(234,67,53,.3);  color: #ff9090; }
-.seat-slot { background: rgba(0,0,0,.3); border-radius: 10px; padding: 14px 12px; text-align: center; border: 2px solid transparent; transition: border .2s; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-.seat-slot.taken { border-color: #3a7a5a; }
-.seat-slot.mine  { border-color: #ffd700; background: rgba(255,215,0,.1); }
-.seat-slot .seat-name { font-weight: bold; font-size: 1rem; }
-.seat-slot .seat-label { font-size: .75rem; color: #aaa; }
-.seat-slot button { padding: 6px 16px; border-radius: 6px; border: none; background: #3a7a5a; color: #fff; cursor: pointer; font-size: .9rem; }
-.seat-slot button:hover { background: #4a9a6a; }
-#room-status { color: #aaa; font-size: .9rem; text-align: center; }
-</style>
-</head>
-<body>
-
-<!-- ═════════ START SCREEN (legacy – kept for solo/offline use) ═════════ -->
-<div id="start-screen" class="screen">
-  <h1>♠ SEEP ♠</h1>
-  <p style="color:#aaa">Classic 4-player card game from Punjab</p>
-  <div class="start-team-box">
-    <h3>Teams</h3>
-    <p>Team 1 (blue): Player 1 &amp; Player 3</p>
-    <p>Team 2 (red):&nbsp; Player 2 &amp; Player 4</p>
-  </div>
-  <button class="btn btn-primary" onclick="startGame()" style="font-size:1.1rem;padding:12px 36px">Start Game</button>
-</div>
-
-<!-- ═════════ BID SCREEN ═════════ -->
-<div id="bid-screen" class="screen">
-  <h2>♠ Bid Phase</h2>
-  <p id="bid-instr">Look at your 4 cards and choose a bid ≥ 9. You must hold a card of that rank as your key to eventually pick up the house.</p>
-  <div class="bid-hand" id="bid-hand-area"></div>
-  <p id="bid-hint" style="color:#ffa040;font-size:.8rem;"></p>
-  <div class="bid-btns" id="bid-btn-area"></div>
-  <button class="btn" onclick="exitGame()" style="margin-top:8px;padding:8px 24px;background:#6b2222;font-size:.9rem">Exit Game</button>
-</div>
-
-<!-- ═════════ GAME SCREEN ═════════ -->
-<div id="game-screen" class="screen">
-
-  <!-- Header -->
-  <div class="g-header">
-    <h1>♠ SEEP</h1>
-    <div class="g-scores">
-      <div class="g-score" id="g-sc0">Team 1 (P1&amp;P3): <strong id="sv0">0</strong></div>
-      <div class="g-score" id="g-sc1">Team 2 (P2&amp;P4): <strong id="sv1">0</strong></div>
-    </div>
-    <div class="g-round" id="g-round">Round 1</div>
-    <button class="btn" onclick="exitGame()" style="padding:4px 14px;font-size:.8rem;background:#6b2222;margin-left:auto">Exit</button>
-  </div>
-
-  <!-- Table -->
-  <div class="g-table">
-
-    <!-- Player 3 (top) -->
-    <div class="player-zone top" id="zone-2">
-      <div class="cards-row" id="hand-2"></div>
-      <div class="p-label t0" id="lbl-2">Player 3 · Team 1</div>
-    </div>
-
-    <!-- Player 2 (left) -->
-    <div class="player-zone left" id="zone-1">
-      <div class="cards-row" id="hand-1"></div>
-      <div class="p-label t1" id="lbl-1">P2·T2</div>
-    </div>
-
-    <!-- Floor -->
-    <div class="floor-zone">
-      <div class="floor-label">TABLE</div>
-      <div class="floor-cards" id="floor-area"></div>
-      <div class="cap-row">
-        <div>T1 pts: <span id="cap0">0</span></div>
-        <div>T2 pts: <span id="cap1">0</span></div>
-      </div>
-    </div>
-
-    <!-- Player 4 (right) -->
-    <div class="player-zone right" id="zone-3">
-      <div class="p-label t1" id="lbl-3">P4·T2</div>
-      <div class="cards-row" id="hand-3"></div>
-    </div>
-
-    <!-- Player 1 (bottom) -->
-    <div class="player-zone bottom" id="zone-0">
-      <div class="p-label t0" id="lbl-0">Player 1 · Team 1</div>
-      <div class="cards-row" id="hand-0"></div>
-    </div>
-
-  </div><!-- .g-table -->
-
-  <!-- Active player's hand — always full-width regardless of seat position -->
-  <div class="active-hand-zone" id="active-hand-zone"></div>
-
-  <!-- Actions -->
-  <div class="g-actions">
-    <div class="turn-label" id="turn-lbl">Player 1's Turn</div>
-    <div class="bid-disp"  id="bid-disp"></div>
-    <div class="action-btns">
-      <button class="btn btn-pick"  id="btn-pick"  onclick="doAction('pick')"  disabled>Pick</button>
-      <button class="btn btn-seep"  id="btn-seep"  onclick="doAction('seep')"  disabled>Seep</button>
-      <button class="btn btn-build" id="btn-build" onclick="doAction('build')" disabled>Build House</button>
-      <button class="btn btn-add"   id="btn-add"   onclick="doAction('add')"   disabled>Add to House</button>
-      <button class="btn btn-throw" id="btn-throw" onclick="doAction('throw')" disabled>Throw</button>
-    </div>
-    <div class="status-msg" id="status-msg">Select a card from your hand to begin.</div>
-  </div>
-
-</div><!-- #game-screen -->
-
-<!-- ═════════ ROUND END ═════════ -->
-<div id="roundend-screen" class="screen">
-  <h2 id="re-title">Round 1 Complete</h2>
-  <table class="score-table">
-    <thead><tr><th>Category</th><th>Team 1</th><th>Team 2</th></tr></thead>
-    <tbody id="re-body"></tbody>
-  </table>
-  <div class="cum-box">
-    <h3>Cumulative Score</h3>
-    <div class="cum-vals">
-      <div>Team 1: <strong id="cum0">0</strong></div>
-      <div>Team 2: <strong id="cum1">0</strong></div>
-    </div>
-  </div>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-    <button class="btn btn-primary" id="re-btn" onclick="nextRound()" style="font-size:1rem;padding:10px 28px">Next Round ▶</button>
-    <button class="btn" onclick="exitGame()" style="padding:10px 24px;font-size:1rem;background:#6b2222">Exit Game</button>
-  </div>
-</div>
-
-<!-- ═════════ GAME OVER ═════════ -->
-<div id="gameover-screen" class="screen">
-  <h1 id="go-title">🏆 Team 1 Wins!</h1>
-  <p  id="go-scores"></p>
-  <button class="btn btn-primary" onclick="startGame()" style="font-size:1rem;padding:10px 28px">New Game</button>
-</div>
-
-<!-- ═════════ AUTH SCREEN ═════════ -->
-<div id="auth-screen" class="screen active">
-  <h1>♠ SEEP ♠</h1>
-  <p>Classic 4-player card game from Punjab</p>
-  <div class="auth-box">
-    <input id="auth-name" type="text" placeholder="Your display name" maxlength="20" autocomplete="off" />
-    <button class="btn btn-primary" onclick="signInAnon()" style="font-size:1.1rem;padding:12px 0">Play →</button>
-  </div>
-</div>
-
-<!-- ═════════ LOBBY SCREEN ═════════ -->
-<div id="lobby-screen" class="screen">
-  <h2>♠ SEEP ♠</h2>
-  <p id="lobby-user">Signed in as <span id="lobby-name-display"></span></p>
-  <div class="lobby-box">
-    <button class="btn btn-primary" onclick="startNewGame()" style="padding:12px 0;font-size:1rem">Start New Game</button>
-    <div class="sep">— or join an existing game —</div>
-    <div class="join-row">
-      <input id="join-code-input" type="text" placeholder="6-digit code" maxlength="6" autocomplete="off" />
-      <button class="btn btn-primary" onclick="joinGame()" style="padding:10px 18px">Join</button>
-    </div>
-  </div>
-  <button id="lobby-signout" onclick="signOutPlayer()">Sign out</button>
-</div>
-
-<!-- ═════════ ROOM SCREEN ═════════ -->
-<div id="room-screen" class="screen">
-  <h2>Game Room</h2>
-  <div class="room-code-box">
-    <div class="label">Share this code</div>
-    <div class="room-code" id="room-code-display" onclick="copyCode()" title="Click to copy">------</div>
-  </div>
-  <div class="seat-grid" id="seat-grid">
-    <div class="seat-header t1">Team 1 (Blue)</div>
-    <div class="seat-header t2">Team 2 (Red)</div>
-    <!-- Seat slots injected by renderRoomScreen() -->
-  </div>
-  <div id="room-status">Waiting for players…</div>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-    <button id="room-start-btn" class="btn btn-primary" onclick="hostStartGame()" style="display:none;padding:12px 36px;font-size:1rem">Start Game ▶</button>
-    <button class="btn" onclick="exitGame()" style="padding:12px 28px;font-size:1rem;background:#6b2222">Leave Room</button>
-  </div>
-</div>
-
-<!-- Seep Overlay -->
-<div id="seep-overlay">
-  <h1>SEEP!</h1>
-  <p id="seep-msg">+50 points!</p>
-</div>
-
-<!-- House Peek Modal -->
-<div id="house-peek" onclick="closePeek()">
-  <div id="peek-content" onclick="event.stopPropagation()">
-    <div id="peek-title">House Cards</div>
-    <div id="peek-cards"></div>
-    <button class="peek-close-btn" onclick="closePeek()">Close ✕</button>
-  </div>
-</div>
-
-<script>
 // ══════════════════════════════════════════════════════
 //  FIREBASE CONFIG  (paste your project values here)
 // ══════════════════════════════════════════════════════
@@ -725,6 +147,15 @@ function freshState() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Show global menu on all screens except home
+  const menuBtn = document.getElementById('global-menu-btn');
+  if (id === 'home-screen') {
+    menuBtn.classList.remove('visible');
+    closeMenu();
+  } else {
+    menuBtn.classList.add('visible');
+    updateMenuInfo();
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1722,12 +1153,13 @@ function showGameOver() {
   // In multiplayer, "New Game" goes back to lobby
   const btn = document.querySelector('#gameover-screen .btn');
   if (currentGameId && btn) {
-    btn.textContent = 'Back to Lobby';
+    btn.textContent = 'Back to Home';
     btn.onclick = () => {
       localStorage.removeItem('seep_gameId');
+      localStorage.removeItem('seep_seat');
       currentGameId = null; localSeat = null;
       unsubscribeAll();
-      showScreen('lobby-screen');
+      showScreen('home-screen');
     };
   } else if (btn) {
     btn.textContent = 'New Game';
@@ -1736,57 +1168,103 @@ function showGameOver() {
 }
 
 // ══════════════════════════════════════════════════════
-//  MULTIPLAYER – AUTH
+//  HOME SCREEN
 // ══════════════════════════════════════════════════════
-async function signInAnon() {
-  const nameInput = document.getElementById('auth-name');
-  const name = nameInput.value.trim();
-  if (!name) { nameInput.focus(); return; }
+let _joinExpanded = false;
+
+function homeSetError(msg) {
+  document.getElementById('home-error').textContent = msg;
+}
+
+function homeToggleJoin() {
+  _joinExpanded = !_joinExpanded;
+  document.getElementById('home-join-expand').style.display = _joinExpanded ? 'flex' : 'none';
+  if (_joinExpanded) document.getElementById('home-code').focus();
+}
+
+// Called by both Start Game and Join Room buttons
+async function _ensureSignedIn() {
+  // Already signed in
+  if (localUid) return true;
+  const nameEl = document.getElementById('home-name');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); homeSetError('Please enter your name first.'); return false; }
+  homeSetError('');
   try {
-    // Sign in anonymously; UID persists in IndexedDB across refreshes
     const cred = await firebase.auth().signInAnonymously();
     localUid  = cred.user.uid;
     localName = name;
     localStorage.setItem('seep_name', name);
-    // If mid-game session, try to rejoin
-    const savedGame = localStorage.getItem('seep_gameId');
-    if (savedGame) {
-      const snap = await DB.ref(`games/${savedGame}`).once('value');
-      if (snap.exists()) {
-        const d = snap.val();
-        const mySeat = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
-        if (mySeat !== -1) {
-          currentGameId = savedGame;
-          localSeat     = mySeat;
-          document.getElementById('lobby-name-display').textContent = localName;
-          subscribeRoom(currentGameId);
-          showScreen('room-screen');
-          return;
-        }
-      }
-    }
-    document.getElementById('lobby-name-display').textContent = localName;
-    showScreen('lobby-screen');
+    return true;
   } catch(e) {
-    alert('Sign-in failed: ' + e.message);
+    homeSetError('Sign-in failed: ' + e.message);
+    return false;
   }
 }
 
-function signOutPlayer() {
+async function homeStartGame() {
+  if (!await _ensureSignedIn()) return;
+  await startNewGame();
+}
+
+async function homeJoinSubmit() {
+  if (!await _ensureSignedIn()) return;
+  const code = document.getElementById('home-code').value.trim();
+  if (code.length !== 6) { homeSetError('Enter a valid 6-digit room code.'); return; }
+  homeSetError('');
+  await joinGame(code);
+}
+
+// ══════════════════════════════════════════════════════
+//  GLOBAL MENU
+// ══════════════════════════════════════════════════════
+function toggleMenu() {
+  document.getElementById('global-menu-dropdown').classList.toggle('open');
+}
+
+function closeMenu() {
+  document.getElementById('global-menu-dropdown').classList.remove('open');
+}
+
+function updateMenuInfo() {
+  document.getElementById('menu-account-name').textContent = localName || '—';
+  const SEAT_LABELS = ['Player 1 (T1)', 'Player 2 (T2)', 'Player 3 (T1)', 'Player 4 (T2)'];
+  let detail = '';
+  if (currentGameId) detail += `Room: ${currentGameId}`;
+  if (localSeat !== null) detail += `  ·  ${SEAT_LABELS[localSeat]}`;
+  document.getElementById('menu-account-detail').textContent = detail;
+}
+
+function menuSignOut() {
+  closeMenu();
+  if (currentGameId) {
+    exitGame().then(() => doSignOut());
+  } else {
+    doSignOut();
+  }
+}
+
+function doSignOut() {
   firebase.auth().signOut();
   localUid = null; localName = ''; currentGameId = null; localSeat = null;
   localStorage.removeItem('seep_gameId');
   localStorage.removeItem('seep_seat');
+  localStorage.removeItem('seep_name');
   unsubscribeAll();
-  showScreen('auth-screen');
+  // Reset home screen to name-input state
+  document.getElementById('home-name').value = '';
+  document.getElementById('home-welcome').style.display = 'none';
+  document.getElementById('home-name').style.display = '';
+  document.getElementById('home-join-expand').style.display = 'none';
+  _joinExpanded = false;
+  showScreen('home-screen');
 }
 
 async function exitGame() {
-  if (!currentGameId) { showScreen('lobby-screen'); return; }
-  // Release our seat so others can see it as empty
+  if (!currentGameId) { showScreen('home-screen'); return; }
   if (localSeat !== null) {
     const seatRef = DB.ref(`games/${currentGameId}/seatMap/${localSeat}`);
-    seatRef.onDisconnect().cancel();   // cancel any pending onDisconnect
+    seatRef.onDisconnect().cancel();
     await seatRef.set(null);
   }
   unsubscribeAll();
@@ -1794,7 +1272,7 @@ async function exitGame() {
   localStorage.removeItem('seep_seat');
   currentGameId = null;
   localSeat = null;
-  showScreen('lobby-screen');
+  showScreen('home-screen');
 }
 
 // ══════════════════════════════════════════════════════
@@ -1820,21 +1298,19 @@ async function startNewGame() {
   showScreen('room-screen');
 }
 
-async function joinGame() {
-  const code = document.getElementById('join-code-input').value.trim();
-  if (code.length !== 6) { alert('Enter a valid 6-digit code'); return; }
+async function joinGame(code) {
   const snap = await DB.ref(`games/${code}`).once('value');
-  if (!snap.exists()) { alert('Room not found'); return; }
+  if (!snap.exists()) { homeSetError('Room not found. Check the code and try again.'); return; }
   const d = snap.val();
-  if (d.status !== 'lobby') { alert('This game has already started'); return; }
-  // Check if already in the room
-  const existing = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
-  if (existing !== -1) {
-    localSeat = existing;
+  if (d.status !== 'lobby') { homeSetError('This game has already started.'); return; }
+  // Check if already seated (reconnect)
+  if (d.seatMap) {
+    const entries = Object.values(d.seatMap);
+    const existing = entries.indexOf(localUid);
+    if (existing !== -1) { localSeat = existing; localStorage.setItem('seep_seat', String(existing)); }
   }
   currentGameId = code;
   localStorage.setItem('seep_gameId', code);
-  // Ensure our name is in the names map
   await DB.ref(`games/${code}/names/${localUid}`).set(localName);
   subscribeRoom(code);
   showScreen('room-screen');
@@ -2043,28 +1519,42 @@ function unsubscribeAll() {
 }
 
 // ══════════════════════════════════════════════════════
-//  MULTIPLAYER – PAGE LOAD / RECONNECT
+//  PAGE LOAD / RECONNECT
 // ══════════════════════════════════════════════════════
+// Close menu when clicking outside
+document.addEventListener('click', e => {
+  const btn = document.getElementById('global-menu-btn');
+  const drop = document.getElementById('global-menu-dropdown');
+  if (!btn.contains(e.target) && !drop.contains(e.target)) closeMenu();
+});
+
+// Enter key on home-code input submits join
+document.getElementById('home-code').addEventListener('keydown', e => {
+  if (e.key === 'Enter') homeJoinSubmit();
+});
+document.getElementById('home-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') homeStartGame();
+});
+
 firebase.auth().onAuthStateChanged(user => {
   if (user) {
     localUid  = user.uid;
     localName = localStorage.getItem('seep_name') || '';
     if (localName) {
-      document.getElementById('lobby-name-display').textContent = localName;
+      // Returning user: show welcome, hide name input
+      document.getElementById('home-welcome').textContent = `Welcome back, ${localName}!`;
+      document.getElementById('home-welcome').style.display = 'block';
+      document.getElementById('home-name').style.display = 'none';
       const savedGame = localStorage.getItem('seep_gameId');
       if (savedGame) {
         currentGameId = savedGame;
         DB.ref(`games/${savedGame}`).once('value').then(snap => {
-          if (!snap.exists()) { showScreen('lobby-screen'); return; }
+          if (!snap.exists()) { currentGameId = null; return; }
           const d = snap.val();
-          // seatMap from Firebase is an object {0: uid, 1: uid, ...}
           if (d.seatMap) {
             const entries = Object.values(d.seatMap);
             const mySeat = entries.indexOf(localUid);
-            if (mySeat !== -1) {
-              localSeat = mySeat;
-              localStorage.setItem('seep_seat', String(mySeat));
-            }
+            if (mySeat !== -1) { localSeat = mySeat; localStorage.setItem('seep_seat', String(mySeat)); }
           }
           if (d.status === 'lobby') {
             subscribeRoom(savedGame);
@@ -2073,13 +1563,9 @@ firebase.auth().onAuthStateChanged(user => {
             subscribeGameState(savedGame);
           }
         });
-      } else {
-        showScreen('lobby-screen');
       }
+      // Stay on home-screen; returning user can pick Start/Join
     }
-    // else: auth-screen stays visible, user needs to enter name
+    // else: new user — home-screen stays, name input visible
   }
 });
-</script>
-</body>
-</html>
