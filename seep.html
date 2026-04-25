@@ -1014,12 +1014,38 @@ function hasKey(ctx, hv) {
 //   Addition  : house value = hand.rank + Σloose ≤ 13.
 //               Requires a key card of that value in remainder or on floor (team house).
 function ruleBuildHouse(ctx) {
-  if (ctx.selHouses.length !== 0)
-    return {valid:false, reason:'Houses in selection — use Add to House instead'};
+  const looseSum  = ctx.selLoose.reduce((s,c) => s + c.rank, 0);
+  const houseSum  = ctx.selHouses.reduce((s,h) => s + h.value, 0);
+
+  // ── Merge mode: one or more floor houses in selection ──
+  // The selected houses + hand card (+ any loose cards) are merged into an existing
+  // target house whose value equals the combined total.
+  if (ctx.selHouses.length > 0) {
+    const hv = ctx.handCard.rank + looseSum + houseSum;
+    if (hv > 13)
+      return {valid:false, reason:`Sum ${hv} exceeds King (13)`};
+    // Target must be a house on the floor with this value that is NOT one of the contributed houses
+    const target = ctx.floor.find(it =>
+      it.type==='house' && it.value===hv && !ctx.selHouses.includes(it));
+    if (!target)
+      return {valid:false, reason:`No house of ${rn(hv)} on the floor to merge into`};
+    // Apply key-card ownership rules (same logic as ruleAddToHouse)
+    let needsKey;
+    if (ctx.team === target.team) {
+      needsKey = (ctx.player === target.owner);
+    } else {
+      needsKey = (target.sharedBy === undefined || ctx.player === target.sharedBy);
+    }
+    if (needsKey && ctx.handCard.rank === target.value &&
+        !ctx.remainder.some(c => c.rank === target.value))
+      return {valid:false,
+        reason:`Must keep a ${rn(target.value)} in hand to capture this house`};
+    return {valid:true, reason:`Merge into house of ${rn(hv)}`, meta:{houseVal:hv, merge:true}};
+  }
+
+  // ── Normal mode: no floor houses in selection ──
   if (ctx.selLoose.length === 0)
     return {valid:false, reason:'Select floor card(s) to combine with your hand card'};
-
-  const looseSum = ctx.selLoose.reduce((s,c) => s + c.rank, 0);
 
   // Determine candidate house value (overlay takes priority)
   const isOverlay = (ctx.handCard.rank === looseSum);
@@ -1142,15 +1168,17 @@ function ruleAddToHouse(ctx) {
 }
 
 // ── Rule: THROW (only when no capture is possible) ──
-// Only loose floor cards participate in mandatory-capture check; houses don't.
+// All floor items (houses by value, loose cards by rank) participate in the
+// mandatory-capture check. If any item or combination sums to the hand card rank,
+// the player must capture — throwing is not allowed.
 function ruleThrow(ctx) {
   // First turn: bidder may only throw the bid card
   if (G.isFirstTurn && ctx.player === G.bidder && ctx.handCard.rank !== G.bidValue)
     return {valid:false, reason:`First turn: can only throw the bid card (${rn(G.bidValue)})`};
-  const looseVals = ctx.floor.filter(it => it.type==='card').map(it => it.card.rank);
-  if (hasSubsetSum(looseVals, ctx.handCard.rank))
+  const allVals = ctx.floor.map(fiv); // houses count as their declared value
+  if (hasSubsetSum(allVals, ctx.handCard.rank))
     return {valid:false,
-      reason:`${rn(ctx.handCard.rank)} can capture loose floor cards — must capture first`};
+      reason:`${rn(ctx.handCard.rank)} can capture a floor item — must capture first`};
   return {valid:true, reason:'Throw card to floor', meta:{}};
 }
 
@@ -1190,6 +1218,7 @@ function buildStatusMsg(rules, ctx) {
   if (rules.pick.valid)  return `Pick: take ${ctx.selItems.length} floor item(s)`;
   if (rules.build.valid) {
     const hv = rules.build.meta.houseVal;
+    if (rules.build.meta.merge) return `Merge selected house(s) into House of ${rn(hv)} (${hv})`;
     return `Build House of ${rn(hv)} (${hv})`;
   }
   if (rules.break.valid) return `Upgrade House → ${rn(rules.break.meta.houseVal)} (${rules.break.meta.houseVal})`;
@@ -1272,17 +1301,18 @@ function computeActions() {
   // Cache rules on G so doAction can decide build vs break without re-evaluating
   G._rules = rules;
   const buildActive = rules.build.valid || rules.break.valid;
-  const buildVal    = buildActive
-    ? (rules.build.valid ? rules.build.meta : rules.break.meta).houseVal
-    : null;
+  const buildMeta   = buildActive ? (rules.build.valid ? rules.build.meta : rules.break.meta) : null;
+  const buildVal    = buildMeta ? buildMeta.houseVal : null;
+  const buildMerge  = !!(buildMeta && buildMeta.merge);
   return {
-    pick:     rules.pick.valid,
-    seep:     rules.seep.valid,
-    build:    buildActive,
+    pick:      rules.pick.valid,
+    seep:      rules.seep.valid,
+    build:     buildActive,
     buildVal,
-    add:      rules.add.valid,
-    throw:    rules.throw.valid,
-    msg:      buildStatusMsg(rules, ctx),
+    buildMerge,
+    add:       rules.add.valid,
+    throw:     rules.throw.valid,
+    msg:       buildStatusMsg(rules, ctx),
   };
 }
 
@@ -1293,7 +1323,9 @@ function updateActions() {
   document.getElementById('btn-build').disabled = !a.build;
   document.getElementById('btn-add').disabled   = !a.add;
   document.getElementById('btn-throw').disabled = !a.throw;
-  document.getElementById('btn-build').textContent = a.build ? `Build House (${rn(a.buildVal)})` : 'Build House';
+  document.getElementById('btn-build').textContent = a.build
+    ? (a.buildMerge ? `Merge → ${rn(a.buildVal)}` : `Build House (${rn(a.buildVal)})`)
+    : 'Build House';
   document.getElementById('status-msg').textContent = a.msg;
   renderFloor(); // re-render so seep auto-selection is reflected
 }
