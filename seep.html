@@ -1776,6 +1776,7 @@ function signOutPlayer() {
   firebase.auth().signOut();
   localUid = null; localName = ''; currentGameId = null; localSeat = null;
   localStorage.removeItem('seep_gameId');
+  localStorage.removeItem('seep_seat');
   unsubscribeAll();
   showScreen('auth-screen');
 }
@@ -1790,6 +1791,7 @@ async function exitGame() {
   }
   unsubscribeAll();
   localStorage.removeItem('seep_gameId');
+  localStorage.removeItem('seep_seat');
   currentGameId = null;
   localSeat = null;
   showScreen('lobby-screen');
@@ -1803,6 +1805,7 @@ async function startNewGame() {
   const seatMap = [null, null, null, null];
   seatMap[0] = localUid;  // host takes seat 0
   localSeat = 0;
+  localStorage.setItem('seep_seat', '0');
   currentGameId = id;
   localStorage.setItem('seep_gameId', id);
   await DB.ref(`games/${id}`).set({
@@ -1851,9 +1854,11 @@ function subscribeRoom(gameId) {
       _roomRef.off('value');
       _roomRef = null;
       subscribeGameState(gameId);
-      // Restore local seat in case of reconnect
+      // Restore local seat in case of reconnect (d.seatMap is a Firebase object)
       if (localSeat === null && d.seatMap) {
-        localSeat = d.seatMap.indexOf(localUid);
+        const entries = Object.values(d.seatMap);
+        const idx = entries.indexOf(localUid);
+        if (idx !== -1) { localSeat = idx; localStorage.setItem('seep_seat', String(idx)); }
       }
       return;
     }
@@ -1919,6 +1924,7 @@ async function takeSeat(seatIdx) {
   });
   if (committed) {
     localSeat = seatIdx;
+    localStorage.setItem('seep_seat', String(seatIdx));
     await DB.ref(`games/${currentGameId}/names/${localUid}`).set(localName);
     // Set up disconnect cleanup
     ref.onDisconnect().set(null);
@@ -1936,10 +1942,11 @@ async function hostStartGame() {
   G.hands[G.bidder] = G.deck.splice(0,4);
   sortHand(G.hands[G.bidder]);
   // Store names indexed by seat
-  G.playerNames = d.seatMap.map(uid => d.names[uid] || `Player ${d.seatMap.indexOf(uid)+1}`);
+  const seatArr = Object.values(d.seatMap);  // seatMap from Firebase may be object
+  G.playerNames = seatArr.map(uid => (d.names && d.names[uid]) || 'Player');
   await DB.ref(`games/${currentGameId}`).update({
     status: 'bid',
-    gameState: sanitise(G),
+    gameStateJson: JSON.stringify(G),
   });
   // All clients pick this up via subscribeGameState
 }
@@ -1956,27 +1963,27 @@ function copyCode() {
 // ══════════════════════════════════════════════════════
 //  MULTIPLAYER – GAME STATE SYNC
 // ══════════════════════════════════════════════════════
-function subscribeGameState(gameId) {
-  _stateRef = DB.ref(`games/${gameId}/gameState`);
+async function subscribeGameState(gameId) {
+  // Recover localSeat if missing (reconnect or page refresh scenario)
+  if (localSeat === null) {
+    const saved = localStorage.getItem('seep_seat');
+    if (saved !== null) {
+      localSeat = parseInt(saved, 10);
+    } else {
+      // Ask Firebase directly
+      const roomSnap = await DB.ref(`games/${gameId}/seatMap`).once('value');
+      if (roomSnap.exists()) {
+        const sm = roomSnap.val();
+        const idx = Object.values(sm).indexOf(localUid);
+        if (idx !== -1) { localSeat = idx; localStorage.setItem('seep_seat', String(idx)); }
+      }
+    }
+  }
+
+  _stateRef = DB.ref(`games/${gameId}/gameStateJson`);
   _stateRef.on('value', snap => {
     if (!snap.exists()) return;
-    G = deepRestore(snap.val());
-    // Pad arrays to required lengths (Firebase strips trailing nulls/empty arrays)
-    if (!Array.isArray(G.hands))     G.hands     = [];
-    while (G.hands.length < 4)      G.hands.push([]);
-    G.hands = G.hands.map(h => Array.isArray(h) ? h : []);
-
-    if (!Array.isArray(G.captured))  G.captured  = [];
-    while (G.captured.length < 2)   G.captured.push([]);
-    G.captured = G.captured.map(c => Array.isArray(c) ? c : []);
-
-    if (!Array.isArray(G.scores))    G.scores    = [];
-    while (G.scores.length < 2)     G.scores.push(0);
-
-    if (!Array.isArray(G.seepBonus)) G.seepBonus = [];
-    while (G.seepBonus.length < 2)  G.seepBonus.push(0);
-
-    if (!Array.isArray(G.floor))        G.floor        = [];
+    G = JSON.parse(snap.val());   // JSON.parse perfectly restores all arrays/types
     if (!Array.isArray(G.selFloorIdxs)) G.selFloorIdxs = [];
     if (G.selHandIdx === undefined)     G.selHandIdx   = null;
     if (G.phase === 'bid') {
@@ -2018,7 +2025,7 @@ function deepRestore(val) {
 async function pushGameState() {
   if (!currentGameId) return;
   const slim = Object.assign({}, G, { selHandIdx: null, selFloorIdxs: [] });
-  await DB.ref(`games/${currentGameId}/gameState`).set(sanitise(slim));
+  await DB.ref(`games/${currentGameId}/gameStateJson`).set(JSON.stringify(slim));
 }
 
 function sanitise(obj) {
@@ -2050,8 +2057,15 @@ firebase.auth().onAuthStateChanged(user => {
         DB.ref(`games/${savedGame}`).once('value').then(snap => {
           if (!snap.exists()) { showScreen('lobby-screen'); return; }
           const d = snap.val();
-          const mySeat = d.seatMap ? d.seatMap.indexOf(localUid) : -1;
-          if (mySeat !== -1) { localSeat = mySeat; }
+          // seatMap from Firebase is an object {0: uid, 1: uid, ...}
+          if (d.seatMap) {
+            const entries = Object.values(d.seatMap);
+            const mySeat = entries.indexOf(localUid);
+            if (mySeat !== -1) {
+              localSeat = mySeat;
+              localStorage.setItem('seep_seat', String(mySeat));
+            }
+          }
           if (d.status === 'lobby') {
             subscribeRoom(savedGame);
             showScreen('room-screen');
