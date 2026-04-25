@@ -1091,20 +1091,29 @@ function ruleBreakHouse(ctx) {
 }
 
 // ── Rule: ADD TO HOUSE (reinforce / contribute to a house) ──
-// Own team's house   → adds cards, makes it Pucca.
-// Opponent's house   → adds cards, makes it Shared (locked, either team can capture).
-// Shared / Pucca     → blocked; house is already locked.
+// Own team's house   → keeps adding cards (Pucca flag only blocks opponents).
+//   - House owner must keep ≥1 card of house value in hand (key to capture later).
+//   - Partner (same team, different player) may add all their matching cards freely.
+// Opponent's house   → one-time share action; blocked once house is Pucca or Shared.
+// Shared             → always blocked.
 // Hand card + selected loose floor cards must sum to house value.
 function ruleAddToHouse(ctx) {
   if (ctx.selHouses.length !== 1)
     return {valid:false, reason:'Select a house to reinforce'};
   const h = ctx.selHouses[0];
-  if (h.pucca || h.shared)
-    return {valid:false, reason:'House is already locked (Pucca ★ or Shared)'};
+  if (h.shared)
+    return {valid:false, reason:'House is already shared and locked'};
+  // Opponents cannot add to a Pucca house; own team may keep reinforcing
+  if (h.pucca && h.team !== ctx.team)
+    return {valid:false, reason:'Cannot add to a Pucca house owned by the other team'};
   const contrib = ctx.handCard.rank + ctx.selLoose.reduce((s,c) => s + c.rank, 0);
   if (contrib !== h.value)
     return {valid:false,
       reason:`Cards must total ${rn(h.value)} (${h.value}) to reinforce — yours total ${contrib}`};
+  // House owner must keep at least one card of house value in hand to capture it later
+  if (h.owner === ctx.player && !ctx.remainder.some(c => c.rank === h.value))
+    return {valid:false,
+      reason:`Must keep a ${rn(h.value)} in hand — you need it to capture your own house`};
   const label = h.team !== ctx.team ? `Share house of ${rn(h.value)}` : `Reinforce house of ${rn(h.value)}`;
   return {valid:true, reason:label, meta:{houseVal:h.value}};
 }
