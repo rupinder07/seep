@@ -1,0 +1,17 @@
+<div id="home-screen" class="screen active">
+  <div class="home-logo">♠ SEEP ♠</div>
+  <p class="home-sub">Classic 4-player card game from Punjab</p>
+  <div class="home-card">
+    <div id="home-welcome" class="home-welcome" style="display:none"></div>
+    <input id="home-name" class="home-input" type="text" placeholder="Enter your name to play" maxlength="20" autocomplete="off" />
+    <div class="home-actions">
+      <button class="btn btn-primary" onclick="homeStartGame()">Start Game</button>
+      <button class="btn" style="background:#1e5c32;color:#fff;border:1px solid #3a8a4e" onclick="homeToggleJoin()">Join Room</button>
+    </div>
+    <div id="home-join-expand" class="home-join-expand" style="display:none">
+      <input id="home-code" type="text" placeholder="6-digit code" maxlength="6" autocomplete="off" />
+      <button class="btn btn-primary" onclick="homeJoinSubmit()">Join →</button>
+    </div>
+    <div id="home-error" class="home-error"></div>
+  </div>
+</div>

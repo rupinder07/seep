@@ -1,12 +1,29 @@
-// ── App entry point: auth, home screen, menu, event wiring ──
-// Imports all modules; sets up callbacks; exposes handlers to HTML onclick attributes.
+// ── App entry point: screen loading, auth, home screen, menu, event wiring ──
+// Imports all modules; fetches screen HTML partials; sets up callbacks.
 
 import { session } from './session.js';
 import { DB, startNewGame, joinGame, subscribeRoom, subscribeGameState,
          unsubscribeAll, setCallbacks, copyCode, hostStartGame } from './sync.js';
 import { renderGame, closePeek } from './render.js';
-import { doAction, initGame, showBidScreen, renderBidScreen,
+import { doAction, initGame, renderBidScreen,
          showRoundEnd, showGameOver, nextRound, startGame } from './game.js';
+
+// ══════════════════════════════════════
+//  SCREEN PARTIALS LOADER
+// ══════════════════════════════════════
+const SCREENS = ['home', 'room', 'bid', 'game', 'roundend', 'gameover'];
+
+async function loadScreens() {
+  const htmls = await Promise.all(
+    SCREENS.map(name =>
+      fetch(`screens/${name}.html`).then(r => {
+        if (!r.ok) throw new Error(`Failed to load screens/${name}.html`);
+        return r.text();
+      })
+    )
+  );
+  document.getElementById('app').innerHTML = htmls.join('\n');
+}
 
 // ══════════════════════════════════════
 //  SCREEN MANAGEMENT
@@ -133,73 +150,8 @@ export async function homeJoinSubmit() {
 }
 
 // ══════════════════════════════════════
-//  WIRE UP INTER-MODULE CALLBACKS
-// ══════════════════════════════════════
-initGame({ showScreen, updateMenuInfo });
-setCallbacks({
-  showScreen,
-  renderGame,
-  renderBidScreen,
-  showRoundEnd,
-  showGameOver,
-  homeSetError,
-});
-
-// ══════════════════════════════════════
-//  FIREBASE AUTH STATE
-// ══════════════════════════════════════
-firebase.auth().onAuthStateChanged(user => {
-  if (!user) return;
-  session.localUid  = user.uid;
-  session.localName = localStorage.getItem('seep_name') || '';
-  if (!session.localName) return; // new user — home screen stays, name input visible
-
-  document.getElementById('home-welcome').textContent    = `Welcome back, ${session.localName}!`;
-  document.getElementById('home-welcome').style.display  = 'block';
-  document.getElementById('home-name').style.display     = 'none';
-
-  const savedGame = localStorage.getItem('seep_gameId');
-  if (!savedGame) return;
-
-  session.currentGameId = savedGame;
-  DB.ref(`games/${savedGame}`).once('value').then(snap => {
-    if (!snap.exists()) { session.currentGameId = null; return; }
-    const d = snap.val();
-    if (d.seatMap) {
-      const mySeat = Object.values(d.seatMap).indexOf(session.localUid);
-      if (mySeat !== -1) {
-        session.localSeat = mySeat;
-        localStorage.setItem('seep_seat', String(mySeat));
-      }
-    }
-    if (d.status === 'lobby') {
-      subscribeRoom(savedGame);
-      showScreen('room-screen');
-    } else {
-      subscribeGameState(savedGame);
-    }
-  });
-});
-
-// ══════════════════════════════════════
-//  DOM EVENT LISTENERS
-// ══════════════════════════════════════
-document.addEventListener('click', e => {
-  const btn  = document.getElementById('global-menu-btn');
-  const drop = document.getElementById('global-menu-dropdown');
-  if (!btn.contains(e.target) && !drop.contains(e.target)) closeMenu();
-});
-
-document.getElementById('home-code').addEventListener('keydown', e => {
-  if (e.key === 'Enter') homeJoinSubmit();
-});
-
-document.getElementById('home-name').addEventListener('keydown', e => {
-  if (e.key === 'Enter') homeStartGame();
-});
-
-// ══════════════════════════════════════
 //  EXPOSE TO HTML onclick ATTRIBUTES
+//  (assigned before init so inline handlers work during load)
 // ══════════════════════════════════════
 window.toggleMenu     = toggleMenu;
 window.menuSignOut    = menuSignOut;
@@ -212,3 +164,77 @@ window.exitGame       = exitGame;
 window.doAction       = doAction;
 window.closePeek      = closePeek;
 window.nextRound      = nextRound;
+
+// ══════════════════════════════════════
+//  BOOT: load screens then wire everything up
+// ══════════════════════════════════════
+async function init() {
+  await loadScreens();
+
+  // Wire inter-module callbacks (needs game + render functions to be defined)
+  initGame({ showScreen, updateMenuInfo });
+  setCallbacks({
+    showScreen,
+    renderGame,
+    renderBidScreen,
+    showRoundEnd,
+    showGameOver,
+    homeSetError,
+  });
+
+  // DOM event listeners (need screen elements to exist in the DOM)
+  document.addEventListener('click', e => {
+    const btn  = document.getElementById('global-menu-btn');
+    const drop = document.getElementById('global-menu-dropdown');
+    if (!btn.contains(e.target) && !drop.contains(e.target)) closeMenu();
+  });
+
+  document.getElementById('home-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') homeJoinSubmit();
+  });
+
+  document.getElementById('home-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') homeStartGame();
+  });
+
+  // Firebase auth (must come after screens so returning-user DOM updates work)
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return;
+    session.localUid  = user.uid;
+    session.localName = localStorage.getItem('seep_name') || '';
+    if (!session.localName) return;
+
+    document.getElementById('home-welcome').textContent   = `Welcome back, ${session.localName}!`;
+    document.getElementById('home-welcome').style.display = 'block';
+    document.getElementById('home-name').style.display    = 'none';
+
+    const savedGame = localStorage.getItem('seep_gameId');
+    if (!savedGame) return;
+
+    session.currentGameId = savedGame;
+    DB.ref(`games/${savedGame}`).once('value').then(snap => {
+      if (!snap.exists()) { session.currentGameId = null; return; }
+      const d = snap.val();
+      if (d.seatMap) {
+        const mySeat = Object.values(d.seatMap).indexOf(session.localUid);
+        if (mySeat !== -1) {
+          session.localSeat = mySeat;
+          localStorage.setItem('seep_seat', String(mySeat));
+        }
+      }
+      if (d.status === 'lobby') {
+        subscribeRoom(savedGame);
+        showScreen('room-screen');
+      } else {
+        subscribeGameState(savedGame);
+      }
+    });
+  });
+}
+
+init().catch(err => {
+  document.getElementById('app').innerHTML =
+    `<div style="color:#f66;padding:2rem;text-align:center">
+       Failed to load game screens.<br><small>${err.message}</small>
+     </div>`;
+});

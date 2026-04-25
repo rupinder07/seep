@@ -1,0 +1,16 @@
+<div id="room-screen" class="screen">
+  <h2>Game Room</h2>
+  <div class="room-code-box">
+    <div class="label">Share this code</div>
+    <div class="room-code" id="room-code-display" onclick="copyCode()" title="Click to copy">------</div>
+  </div>
+  <div class="seat-grid" id="seat-grid">
+    <div class="seat-header t1">Team 1 (Blue)</div>
+    <div class="seat-header t2">Team 2 (Red)</div>
+  </div>
+  <div id="room-status">Waiting for players…</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <button id="room-start-btn" class="btn btn-primary" onclick="hostStartGame()" style="display:none;padding:12px 36px;font-size:1rem">Start Game ▶</button>
+    <button class="btn btn-danger" onclick="exitGame()" style="padding:12px 28px;font-size:1rem">Leave Room</button>
+  </div>
+</div>

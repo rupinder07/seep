@@ -1,0 +1,56 @@
+<div id="game-screen" class="screen">
+
+  <!-- Header -->
+  <div class="g-header">
+    <h1>♠ SEEP</h1>
+    <div class="g-scores">
+      <div class="g-score" id="g-sc0">Team 1: <strong id="sv0">0</strong></div>
+      <div class="g-score" id="g-sc1">Team 2: <strong id="sv1">0</strong></div>
+    </div>
+    <div class="g-round" id="g-round">Round 1</div>
+  </div>
+
+  <!-- Table -->
+  <div class="g-table">
+    <div class="player-zone top" id="zone-2">
+      <div class="cards-row" id="hand-2"></div>
+      <div class="p-label t0" id="lbl-2">Player 3 · Team 1</div>
+    </div>
+    <div class="player-zone left" id="zone-1">
+      <div class="cards-row" id="hand-1"></div>
+      <div class="p-label t1" id="lbl-1">P2·T2</div>
+    </div>
+    <div class="floor-zone">
+      <div class="floor-label">TABLE</div>
+      <div class="floor-cards" id="floor-area"></div>
+      <div class="cap-row">
+        <div>T1 pts: <span id="cap0">0</span></div>
+        <div>T2 pts: <span id="cap1">0</span></div>
+      </div>
+    </div>
+    <div class="player-zone right" id="zone-3">
+      <div class="p-label t1" id="lbl-3">P4·T2</div>
+      <div class="cards-row" id="hand-3"></div>
+    </div>
+    <div class="player-zone bottom" id="zone-0">
+      <div class="p-label t0" id="lbl-0">Player 1 · Team 1</div>
+      <div class="cards-row" id="hand-0"></div>
+    </div>
+  </div>
+
+  <div class="active-hand-zone" id="active-hand-zone"></div>
+
+  <div class="g-actions">
+    <div class="turn-label" id="turn-lbl">Player 1's Turn</div>
+    <div class="bid-disp"  id="bid-disp"></div>
+    <div class="action-btns">
+      <button class="btn btn-pick"  id="btn-pick"  onclick="doAction('pick')"  disabled>Pick</button>
+      <button class="btn btn-seep"  id="btn-seep"  onclick="doAction('seep')"  disabled>Seep</button>
+      <button class="btn btn-build" id="btn-build" onclick="doAction('build')" disabled>Build House</button>
+      <button class="btn btn-add"   id="btn-add"   onclick="doAction('add')"   disabled>Add to House</button>
+      <button class="btn btn-throw" id="btn-throw" onclick="doAction('throw')" disabled>Throw</button>
+    </div>
+    <div class="status-msg" id="status-msg">Select a card from your hand to begin.</div>
+  </div>
+
+</div><!-- #game-screen -->
