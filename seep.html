@@ -1129,7 +1129,9 @@ function ruleAddToHouse(ctx) {
     }
   }
 
-  if (needsKey && !ctx.remainder.some(c => c.rank === h.value))
+  // Only guard the key card when the hand card itself IS the key card (rank === house value).
+  // Contributing other cards that happen to sum to house value doesn't consume a key card.
+  if (needsKey && ctx.handCard.rank === h.value && !ctx.remainder.some(c => c.rank === h.value))
     return {valid:false,
       reason:`Must keep a ${rn(h.value)} in hand — you need it to capture this house`};
 
