@@ -95,9 +95,27 @@ function makeUndoubledHouseEl(house, idx) {
 
 // ── House peek modal ──
 export function showHousePeek(house) {
-  const houseState = house.shared ? ' ⚑ Shared (both teams)' : house.pucca ? ' ★ Pucca' : isDoubled(house) ? ' ◆ Doubled' : ' (building)';
+  const houseState = house.shared ? ' ⚑ Shared' : house.pucca ? ' ★ Pucca' : isDoubled(house) ? ' ◆ Doubled' : ' (building)';
   document.getElementById('peek-title').textContent =
     `House of ${rn(house.value)}${houseState} — ${house.cards.length} cards`;
+
+  // Owner info
+  const ownersEl = document.getElementById('peek-owners');
+  ownersEl.innerHTML = '';
+  const builderName = playerName(house.owner);
+  const builderTeam = house.team + 1;
+  if (house.shared && house.sharedBy !== undefined) {
+    const sharedName = playerName(house.sharedBy);
+    const sharedTeam = (house.team === 0 ? 1 : 0) + 1;
+    ownersEl.innerHTML =
+      `<span class="peek-owner t${house.team}">Built by ${builderName} (Team ${builderTeam})</span>` +
+      `<span class="peek-owner-sep"> · </span>` +
+      `<span class="peek-owner t${house.team === 0 ? 1 : 0}">Shared by ${sharedName} (Team ${sharedTeam})</span>`;
+  } else {
+    ownersEl.innerHTML =
+      `<span class="peek-owner t${house.team}">Built by ${builderName} (Team ${builderTeam})</span>`;
+  }
+
   const area = document.getElementById('peek-cards');
   area.innerHTML = '';
   house.cards.forEach(c => area.appendChild(makeCard(c, false, false)));
