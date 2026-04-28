@@ -47,8 +47,8 @@ export async function startNewGame() {
   const id = Math.floor(100000 + Math.random() * 900000).toString()
   session.localSeat     = 0
   session.currentGameId = id
-  localStorage.setItem('seep_seat', '0')
-  localStorage.setItem('seep_gameId', id)
+  sessionStorage.setItem('seep_seat', '0')
+  sessionStorage.setItem('seep_gameId', id)
 
   const seatMap = { 0: session.localUid, 1: null, 2: null, 3: null }
   await set(dbRef(DB, `games/${id}`), {
@@ -72,11 +72,11 @@ export async function joinGame(code) {
     const existing = Object.values(d.seatMap).indexOf(session.localUid)
     if (existing !== -1) {
       session.localSeat = existing
-      localStorage.setItem('seep_seat', String(existing))
+      sessionStorage.setItem('seep_seat', String(existing))
     }
   }
   session.currentGameId = code
-  localStorage.setItem('seep_gameId', code)
+  sessionStorage.setItem('seep_gameId', code)
   await set(dbRef(DB, `games/${code}/names/${session.localUid}`), session.localName)
   subscribeRoom(code)
   session.screen = 'room'
@@ -100,7 +100,7 @@ export function subscribeRoom(gameId) {
         const idx = Object.values(d.seatMap).indexOf(session.localUid)
         if (idx !== -1) {
           session.localSeat = idx
-          localStorage.setItem('seep_seat', String(idx))
+          sessionStorage.setItem('seep_seat', String(idx))
         }
       }
       subscribeGameState(gameId)
@@ -118,7 +118,7 @@ export async function takeSeat(seatIdx) {
   })
   if (committed) {
     session.localSeat = seatIdx
-    localStorage.setItem('seep_seat', String(seatIdx))
+    sessionStorage.setItem('seep_seat', String(seatIdx))
     await set(dbRef(DB, `games/${session.currentGameId}/names/${session.localUid}`), session.localName)
     onDisconnect(seatDbRef).set(null)
   } else {
@@ -158,7 +158,7 @@ export async function copyCode() {
 
 export async function subscribeGameState(gameId) {
   if (session.localSeat === null) {
-    const saved = localStorage.getItem('seep_seat')
+    const saved = sessionStorage.getItem('seep_seat')
     if (saved !== null) {
       session.localSeat = parseInt(saved, 10)
     } else {
@@ -168,7 +168,7 @@ export async function subscribeGameState(gameId) {
         const idx = Object.values(sm).indexOf(session.localUid)
         if (idx !== -1) {
           session.localSeat = idx
-          localStorage.setItem('seep_seat', String(idx))
+          sessionStorage.setItem('seep_seat', String(idx))
         }
       }
     }
@@ -193,10 +193,10 @@ export function initAuth() {
   onAuthStateChanged(auth, async user => {
     if (!user) return
     session.localUid  = user.uid
-    session.localName = localStorage.getItem('seep_name') || ''
+    session.localName = sessionStorage.getItem('seep_name') || ''
     if (!session.localName) return
 
-    const savedGame = localStorage.getItem('seep_gameId')
+    const savedGame = sessionStorage.getItem('seep_gameId')
     if (!savedGame) return
 
     session.currentGameId = savedGame
@@ -207,7 +207,7 @@ export function initAuth() {
       const mySeat = Object.values(d.seatMap).indexOf(session.localUid)
       if (mySeat !== -1) {
         session.localSeat = mySeat
-        localStorage.setItem('seep_seat', String(mySeat))
+        sessionStorage.setItem('seep_seat', String(mySeat))
       }
     }
     if (d.status === 'lobby') {
@@ -226,7 +226,7 @@ export async function ensureSignedIn(name) {
   const cred        = await signInAnonymously(auth)
   session.localUid  = cred.user.uid
   session.localName = trimmed
-  localStorage.setItem('seep_name', trimmed)
+  sessionStorage.setItem('seep_name', trimmed)
   return true
 }
 
@@ -237,9 +237,9 @@ export async function doSignOut() {
   session.localName     = ''
   session.currentGameId = null
   session.localSeat     = null
-  localStorage.removeItem('seep_gameId')
-  localStorage.removeItem('seep_seat')
-  localStorage.removeItem('seep_name')
+  sessionStorage.removeItem('seep_gameId')
+  sessionStorage.removeItem('seep_seat')
+  sessionStorage.removeItem('seep_name')
   session.screen = 'home'
 }
 
@@ -251,8 +251,8 @@ export async function exitGame() {
     await set(seatDbRef, null)
   }
   unsubscribeAll()
-  localStorage.removeItem('seep_gameId')
-  localStorage.removeItem('seep_seat')
+  sessionStorage.removeItem('seep_gameId')
+  sessionStorage.removeItem('seep_seat')
   session.currentGameId = null
   session.localSeat     = null
   session.screen        = 'home'

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getDatabase }   from 'firebase/database'
-import { getAuth }       from 'firebase/auth'
+import { getAuth, browserSessionPersistence, setPersistence } from 'firebase/auth'
 
 const FIREBASE_CONFIG = {
   apiKey:            'AIzaSyDzJsJYfTcWaeC5f43EXG-brzAaY7_BBk8',
@@ -15,3 +15,4 @@ const FIREBASE_CONFIG = {
 const app = initializeApp(FIREBASE_CONFIG)
 export const DB   = getDatabase(app)
 export const auth = getAuth(app)
+setPersistence(auth, browserSessionPersistence)
