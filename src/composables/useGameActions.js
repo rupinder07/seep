@@ -4,7 +4,7 @@ import { computeActions } from '../logic/rules.js'
 import { useGameState } from './useGameState.js'
 import { useSession } from './useSession.js'
 
-const { gameState, ui, clearSel, showSeepOverlay } = useGameState()
+const { gameState, ui, clearSel, showSeepOverlay, showFinalBanner } = useGameState()
 const { session } = useSession()
 
 // Injected by useGameSync after it loads
@@ -131,6 +131,8 @@ export function execBuild(val) {
     mergeLooseIntoHouse(gameState.floor, newHouse)
   }
 
+  gameState.finalEligible = cp
+  gameState.finalHouseVal = val
   gameState.isFirstTurn = false
   clearSel()
   advanceTurn()
@@ -152,6 +154,8 @@ export function execAdd() {
   gameState.hands[cp].splice(ui.selHandIdx, 1)
   looseIdxs.sort((a, b) => b - a).forEach(i => gameState.floor.splice(i, 1))
   mergeLooseIntoHouse(gameState.floor, house)
+  gameState.finalEligible = cp
+  gameState.finalHouseVal = house.value
   gameState.isFirstTurn = false
   clearSel()
   advanceTurn()
@@ -175,7 +179,23 @@ export function allHandsEmpty() {
   return gameState.hands.every(h => h.length === 0)
 }
 
+export function doFinal() {
+  if (session.localSeat !== null && session.localSeat !== gameState.finalEligible) return
+  if (session.localSeat !== null && session.localSeat !== gameState.currentPlayer) return
+  const val = gameState.finalHouseVal
+  gameState.finalEligible = null
+  gameState.finalHouseVal = null
+  showFinalBanner(val)
+  if (session.currentGameId) _pushGameState()
+}
+
 export function advanceTurn() {
+  // If the player who just acted is not the final-eligible player, that
+  // counts as "the next person played" — clear the declaration window.
+  if (gameState.finalEligible !== null && gameState.currentPlayer !== gameState.finalEligible) {
+    gameState.finalEligible = null
+    gameState.finalHouseVal = null
+  }
   if (!gameState.handsDealt) dealRemainingCards()
   if (allHandsEmpty()) { endRound(); return }
   gameState.currentPlayer = (gameState.currentPlayer + 1) % 4

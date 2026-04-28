@@ -7,6 +7,7 @@ const gameState    = reactive(freshState())
 const ui           = reactive({ selHandIdx: null, selFloorIdxs: [] })
 const seepOverlay  = reactive({ visible: false, message: '', onDone: null })
 const housePeek    = reactive({ visible: false, house: null })
+const finalBanner  = reactive({ visible: false, message: '' })
 
 export function useGameState() {
   const actions = computed(() => computeActions(gameState, ui))
@@ -31,6 +32,11 @@ export function useGameState() {
     ui.selFloorIdxs = []
   }
 
+  function showFinalBanner(houseVal) {
+    finalBanner.message = `House ${houseVal} Final!!`
+    finalBanner.visible = true
+  }
+
   function showSeepOverlay(team, pts, cb) {
     seepOverlay.message = `+${pts} points for Team ${team + 1}!`
     seepOverlay.visible = true
@@ -53,11 +59,13 @@ export function useGameState() {
     actions,
     seepOverlay,
     housePeek,
+    finalBanner,
     playerName,
     selectHandCard,
     toggleFloor,
     clearSel,
     showSeepOverlay,
+    showFinalBanner,
     openHousePeek,
     closeHousePeek,
   }

@@ -374,13 +374,20 @@ body {
 .btn:disabled { opacity: .32; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 .btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
 
-.btn-pick    { background: #1e6a2e; color: #fff; border: 1px solid #3aaa4e; }
-.btn-seep    { background: #6a1e6a; color: #fff; border: 1px solid #aa3aaa; }
-.btn-build   { background: #1e3a7a; color: #fff; border: 1px solid #3a6aaa; }
-.btn-add     { background: #7a4a00; color: #fff; border: 1px solid #c07820; }
 .btn-throw   { background: #3a3a3a; color: #ccc; border: 1px solid #666; }
+.btn-pick    { background: #1e6a2e; color: #fff; border: 1px solid #3aaa4e; }
+.btn-house   { background: #1e3a7a; color: #fff; border: 1px solid #3a6aaa; }
+.btn-seep    { background: #6a1e6a; color: #fff; border: 2px solid #cc55cc; }
+.btn-final   { background: #7a3a00; color: #fff; border: 2px solid #ffaa33; }
 .btn-primary { background: #ffd700; color: #000; }
 .btn-danger  { background: #6b2222; color: #fff; }
+
+/* ── Special buttons (Seep + Final) — glow when enabled ── */
+.btn-special:not(:disabled) {
+  box-shadow: 0 0 10px 2px currentColor;
+}
+.btn-seep:not(:disabled)  { box-shadow: 0 0 12px 2px rgba(204,85,204,.7); }
+.btn-final:not(:disabled) { box-shadow: 0 0 12px 2px rgba(255,170,51,.7); }
 
 /* ── Seep overlay ── */
 #seep-overlay {
@@ -392,6 +399,20 @@ body {
 #seep-overlay h1 { font-size: 4rem; color: #ffd700; animation: pulse .5s infinite alternate; }
 #seep-overlay p  { font-size: 1.4rem; color: #fff; }
 @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+/* ── Final banner ── */
+#final-banner {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.78); z-index: 100;
+  align-items: center; justify-content: center;
+}
+#final-banner.show { display: flex; }
+#final-msg {
+  font-size: 3rem; font-weight: bold; letter-spacing: 4px;
+  color: #ffaa33;
+  text-shadow: 0 0 28px rgba(255,170,51,.8), 0 0 60px rgba(255,170,51,.4);
+  animation: pulse .5s infinite alternate;
+}
 
 /* ── Round End ── */
 #roundend-screen {

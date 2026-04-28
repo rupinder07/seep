@@ -13,6 +13,7 @@
 
   <!-- Overlays (always mounted) -->
   <SeepOverlay />
+  <FinalBanner />
   <HousePeekModal />
 </template>
 
@@ -20,6 +21,7 @@
 import { onMounted } from 'vue'
 import GlobalMenu     from './components/ui/GlobalMenu.vue'
 import SeepOverlay    from './components/ui/SeepOverlay.vue'
+import FinalBanner    from './components/ui/FinalBanner.vue'
 import HousePeekModal from './components/ui/HousePeekModal.vue'
 import HomeScreen     from './components/screens/HomeScreen.vue'
 import RoomScreen     from './components/screens/RoomScreen.vue'

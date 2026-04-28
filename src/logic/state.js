@@ -39,6 +39,8 @@ export function freshState() {
     handsDealt:       false,
     lastCaptureTeam:  null,
     playerNames:      null,
+    finalEligible:    null,   // seat index of player who may declare Final, or null
+    finalHouseVal:    null,   // house value they built/contributed to
   };
 }
 
