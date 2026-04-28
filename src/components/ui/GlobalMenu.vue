@@ -6,6 +6,7 @@
         <div id="menu-account-name">{{ session.localName || '—' }}</div>
         <div id="menu-account-detail">{{ menuDetail }}</div>
       </div>
+      <button v-if="session.currentGameId" class="menu-item danger" @click="handleLeave">Leave Room</button>
       <button class="menu-item" @click="handleSignOut">Sign Out</button>
     </div>
   </div>
@@ -14,7 +15,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSession } from '../../composables/useSession.js'
-import { doSignOut } from '../../composables/useGameSync.js'
+import { doSignOut, exitGame } from '../../composables/useGameSync.js'
 
 const { session } = useSession()
 const open = ref(false)
@@ -26,6 +27,11 @@ const menuDetail = computed(() => {
   if (session.localSeat !== null) d += `  ·  ${SEAT_LABELS[session.localSeat]}`
   return d
 })
+
+async function handleLeave() {
+  open.value = false
+  await exitGame()
+}
 
 async function handleSignOut() {
   open.value = false
