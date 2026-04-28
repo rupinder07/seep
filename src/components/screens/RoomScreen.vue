@@ -19,6 +19,12 @@
         <template v-if="seatUid(seat)">
           <div class="seat-name">{{ seatName(seat) }}</div>
           <div class="seat-label">{{ SEAT_LABELS[seat] }}</div>
+          <button
+            v-if="isHost && seatUid(seat) !== session.localUid"
+            class="seat-kick-btn"
+            title="Remove player"
+            @click="kickPlayer(seat)"
+          >✕ Remove</button>
         </template>
         <template v-else-if="!myUidInMap">
           <div class="seat-label">{{ SEAT_LABELS[seat] }}</div>
@@ -49,7 +55,8 @@
 import { ref, computed } from 'vue'
 import { useSession } from '../../composables/useSession.js'
 import {
-  takeSeat, hostStartGame, copyCode, exitGame, _latestRoomData,
+  takeSeat, hostStartGame, copyCode, exitGame, kickPlayer,
+  _latestRoomData,
 } from '../../composables/useGameSync.js'
 
 const { session } = useSession()
@@ -60,7 +67,7 @@ const SEAT_LABELS = ['Player 1 (T1)', 'Player 2 (T2)', 'Player 3 (T1)', 'Player 
 const roomData   = _latestRoomData
 const seatMap    = computed(() => roomData.value?.seatMap   || {})
 const names      = computed(() => roomData.value?.names     || {})
-const isHost     = computed(() => roomData.value?.hostUid   === session.localUid)
+const isHost     = computed(() => roomData.value?.hostUid === session.localUid || session.hostUid === session.localUid)
 const filledCount = computed(() => Object.values(seatMap.value).filter(v => v !== null).length)
 const allFull    = computed(() => filledCount.value === 4)
 const myUidInMap = computed(() => Object.values(seatMap.value).includes(session.localUid))

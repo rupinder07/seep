@@ -21,10 +21,21 @@ let _stateRef = null
 // ── Reactive room data (read by RoomScreen) ──
 export const _latestRoomData = ref(null)
 
+// ── Live seatMap + hostUid (updated throughout the game) ──
+export const _liveSeatMap = ref({})
+let _seatMapRef = null
+
+function watchSeatMap(gameId) {
+  if (_seatMapRef) { off(_seatMapRef); _seatMapRef = null }
+  _seatMapRef = dbRef(DB, `games/${gameId}/seatMap`)
+  onValue(_seatMapRef, snap => { _liveSeatMap.value = snap.val() || {} })
+}
+
 // ── Firebase listener refs ──
 export function unsubscribeAll() {
-  if (_roomRef)  { off(_roomRef);  _roomRef  = null }
-  if (_stateRef) { off(_stateRef); _stateRef = null }
+  if (_roomRef)    { off(_roomRef);    _roomRef    = null }
+  if (_stateRef)   { off(_stateRef);   _stateRef   = null }
+  if (_seatMapRef) { off(_seatMapRef); _seatMapRef = null }
 }
 
 // ── Push current game state to Firebase (stripped of UI-only fields) ──
@@ -63,11 +74,17 @@ export async function startNewGame() {
   session.screen = 'room'
 }
 
+export async function kickPlayer(seatIdx) {
+  if (!session.currentGameId) return
+  if (session.localUid !== session.hostUid) return
+  await set(dbRef(DB, `games/${session.currentGameId}/seatMap/${seatIdx}`), null)
+}
+
 export async function joinGame(code) {
   const snap = await get(dbRef(DB, `games/${code}`))
   if (!snap.exists()) { return { error: 'Room not found. Check the code and try again.' } }
   const d = snap.val()
-  if (d.status !== 'lobby') { return { error: 'This game has already started.' } }
+  if (d.status === 'gameover') { return { error: 'This game has already ended.' } }
   if (d.seatMap) {
     const existing = Object.values(d.seatMap).indexOf(session.localUid)
     if (existing !== -1) {
@@ -89,10 +106,12 @@ export async function joinGame(code) {
 
 export function subscribeRoom(gameId) {
   unsubscribeAll()
+  watchSeatMap(gameId)
   _roomRef = dbRef(DB, `games/${gameId}`)
   onValue(_roomRef, snap => {
     if (!snap.exists()) return
     const d = snap.val()
+    session.hostUid = d.hostUid || null
     if (d.status === 'bid' || d.status === 'playing') {
       off(_roomRef)
       _roomRef = null
@@ -157,14 +176,17 @@ export async function copyCode() {
 // ══════════════════════════════════════
 
 export async function subscribeGameState(gameId) {
+  watchSeatMap(gameId)
   if (session.localSeat === null) {
     const saved = sessionStorage.getItem('seep_seat')
     if (saved !== null) {
       session.localSeat = parseInt(saved, 10)
     } else {
-      const roomSnap = await get(dbRef(DB, `games/${gameId}/seatMap`))
+      const roomSnap = await get(dbRef(DB, `games/${gameId}`))
       if (roomSnap.exists()) {
-        const sm  = roomSnap.val()
+        const d   = roomSnap.val()
+        session.hostUid = d.hostUid || null
+        const sm  = d.seatMap || {}
         const idx = Object.values(sm).indexOf(session.localUid)
         if (idx !== -1) {
           session.localSeat = idx
@@ -237,6 +259,7 @@ export async function doSignOut() {
   session.localName     = ''
   session.currentGameId = null
   session.localSeat     = null
+  session.hostUid       = null
   sessionStorage.removeItem('seep_gameId')
   sessionStorage.removeItem('seep_seat')
   sessionStorage.removeItem('seep_name')

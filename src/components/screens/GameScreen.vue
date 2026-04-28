@@ -24,6 +24,7 @@
         <div class="p-label t0" :class="{ 'active-lbl': gameState.currentPlayer === 2 }">
           {{ playerName(2) }} · Team 1
         </div>
+        <button v-if="isHost && seatOccupied(2) && 2 !== session.localSeat" class="kick-btn" @click="kickPlayer(2)" title="Remove player">✕</button>
       </div>
 
       <!-- Left: Player 1 (seat 1) -->
@@ -34,6 +35,7 @@
         <div class="p-label t1" :class="{ 'active-lbl': gameState.currentPlayer === 1 }">
           {{ playerName(1) }}·T2
         </div>
+        <button v-if="isHost && seatOccupied(1) && 1 !== session.localSeat" class="kick-btn" @click="kickPlayer(1)" title="Remove player">✕</button>
       </div>
 
       <!-- Center: Floor -->
@@ -54,6 +56,7 @@
         <div class="cards-row">
           <PlayerHand :count="gameState.hands[3]?.length ?? 0" />
         </div>
+        <button v-if="isHost && seatOccupied(3) && 3 !== session.localSeat" class="kick-btn" @click="kickPlayer(3)" title="Remove player">✕</button>
       </div>
 
       <!-- Bottom: Player 0 (seat 0) -->
@@ -83,8 +86,14 @@ import FloorArea   from '../game/FloorArea.vue'
 import ActiveHand  from '../game/ActiveHand.vue'
 import ActionsPanel from '../game/ActionsPanel.vue'
 import { useGameState } from '../../composables/useGameState.js'
+import { useSession } from '../../composables/useSession.js'
+import { kickPlayer, _liveSeatMap } from '../../composables/useGameSync.js'
 
 const { gameState, playerName } = useGameState()
+const { session } = useSession()
+
+const isHost      = computed(() => session.hostUid && session.hostUid === session.localUid)
+const seatOccupied = (seat) => !!_liveSeatMap.value[seat]
 
 function capPts(team) {
   return (gameState.captured[team] ?? []).reduce((s, c) => s + cardPts(c), 0) + (gameState.seepBonus[team] ?? 0)

@@ -6,6 +6,7 @@ const session = reactive({
   localName:     '',
   currentGameId: null,
   localSeat:     null,
+  hostUid:       null,
   screen:        'home',   // 'home' | 'room' | 'game'
 })
 
