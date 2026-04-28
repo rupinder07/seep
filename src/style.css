@@ -9,8 +9,7 @@ body {
 }
 
 /* ── Screens ── */
-.screen { display: none; }
-.screen.active { display: flex; flex-direction: column; }
+.screen { display: flex; flex-direction: column; }
 
 /* ══════════════════════════════════════
    HOME SCREEN
