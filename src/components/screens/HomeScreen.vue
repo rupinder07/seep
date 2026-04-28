@@ -52,7 +52,7 @@ const errorMsg    = ref('')
 
 async function handleStartGame() {
   errorMsg.value = ''
-  const name = session.localUid ? session.localName : nameInput.value.trim()
+  const name = session.localName || nameInput.value.trim()
   if (!name) { errorMsg.value = 'Please enter your name first.'; return }
   try {
     await ensureSignedIn(name)
@@ -64,7 +64,7 @@ async function handleStartGame() {
 
 async function handleJoinSubmit() {
   errorMsg.value = ''
-  const name = session.localUid ? session.localName : nameInput.value.trim()
+  const name = session.localName || nameInput.value.trim()
   if (!name) { errorMsg.value = 'Please enter your name first.'; return }
   const code = codeInput.value.trim()
   if (code.length !== 6) { errorMsg.value = 'Enter a valid 6-digit room code.'; return }
