@@ -4,43 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seep</title>
-<link rel="stylesheet" href="style.css">
-<!-- Firebase compat SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
-
-<!-- ═════════ GLOBAL MENU ═════════ -->
-<button id="global-menu-btn" onclick="toggleMenu()">☰</button>
-<div id="global-menu-dropdown">
-  <div class="menu-section">
-    <div class="menu-section-title">Account</div>
-    <div class="menu-account-name" id="menu-account-name">—</div>
-    <div class="menu-account-detail" id="menu-account-detail"></div>
-  </div>
-  <button class="menu-item danger" onclick="menuSignOut()">Sign Out</button>
-</div>
-
-<!-- ═════════ SCREEN CONTAINER (populated by app.js) ═════════ -->
 <div id="app"></div>
-
-<!-- ═════════ PERSISTENT OVERLAYS ═════════ -->
-<div id="seep-overlay">
-  <h1>SEEP!</h1>
-  <p id="seep-msg">+50 points!</p>
-</div>
-
-<div id="house-peek" onclick="closePeek()">
-  <div id="peek-content" onclick="event.stopPropagation()">
-    <div id="peek-title">House Cards</div>
-    <div id="peek-owners"></div>
-    <div id="peek-cards"></div>
-    <button class="peek-close-btn" onclick="closePeek()">Close ✕</button>
-  </div>
-</div>
-
-<script type="module" src="js/app.js"></script>
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
