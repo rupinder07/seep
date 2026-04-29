@@ -1,7 +1,6 @@
 <template>
   <div id="home-screen" class="screen">
     <div class="home-logo">♠ SEEP ♠</div>
-    <p class="home-sub">Classic 4-player card game from Punjab</p>
     <div class="home-card">
       <div v-if="session.localName && session.localUid" class="home-welcome">
         Welcome back, {{ session.localName }}!
