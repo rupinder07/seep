@@ -11,7 +11,7 @@
       />
     </div>
     <p v-if="hintText" style="color:#ffa040;font-size:.8rem;">{{ hintText }}</p>
-    <div class="bid-btns">
+    <div v-if="isBidder" class="bid-btns">
       <button
         v-for="v in validBids"
         :key="v"
