@@ -36,13 +36,10 @@ const canHouse = computed(() => actions.value.build || actions.value.add)
 
 const canFinal = computed(() => {
   if (gameState.finalEligible === null) return false
-  // Online: must be your seat, your turn
-  if (session.localSeat !== null) {
-    return gameState.finalEligible === session.localSeat &&
-           gameState.currentPlayer === session.localSeat
-  }
-  // Local/offline: eligible player must be the current player
-  return gameState.finalEligible === gameState.currentPlayer
+  // Online: enabled as soon as you build/contribute, no turn check
+  if (session.localSeat !== null) return gameState.finalEligible === session.localSeat
+  // Local/offline: enabled whenever any player has built/contributed
+  return true
 })
 
 function doHouse() {

@@ -181,7 +181,6 @@ export function allHandsEmpty() {
 
 export function doFinal() {
   if (session.localSeat !== null && session.localSeat !== gameState.finalEligible) return
-  if (session.localSeat !== null && session.localSeat !== gameState.currentPlayer) return
   const val = gameState.finalHouseVal
   gameState.finalEligible = null
   gameState.finalHouseVal = null
