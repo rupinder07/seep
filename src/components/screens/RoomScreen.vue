@@ -44,7 +44,7 @@
         style="padding:12px 36px;font-size:1rem"
         @click="hostStartGame"
       >Start Game ▶</button>
-      <button class="btn btn-exit" style="padding:12px 28px;font-size:1rem" @click="exitGame">
+      <button class="btn btn-exit" style="padding:12px 28px;font-size:1rem" @click="handleExit">
         🚪 Leave Room
       </button>
     </div>
@@ -58,6 +58,12 @@ import {
   takeSeat, hostStartGame, copyCode, exitGame, kickPlayer,
   _latestRoomData,
 } from '../../composables/useGameSync.js'
+import { requestConfirm } from '../../composables/useConfirm.js'
+
+async function handleExit() {
+  const yes = await requestConfirm('Are you sure you want to leave the room?')
+  if (yes) exitGame()
+}
 
 const { session } = useSession()
 const copiedMsg = ref('')

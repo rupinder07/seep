@@ -20,9 +20,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { copyCode } from '../../composables/useGameSync.js'
+import { copyCode, doSignOut, exitGame } from '../../composables/useGameSync.js'
 import { useSession } from '../../composables/useSession.js'
-import { doSignOut, exitGame } from '../../composables/useGameSync.js'
+import { requestConfirm } from '../../composables/useConfirm.js'
 
 const { session } = useSession()
 const open      = ref(false)
@@ -46,7 +46,8 @@ async function handleCopyCode() {
 
 async function handleLeave() {
   open.value = false
-  await exitGame()
+  const yes = await requestConfirm('Are you sure you want to leave the room?')
+  if (yes) await exitGame()
 }
 
 async function handleSignOut() {

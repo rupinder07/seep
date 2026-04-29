@@ -18,7 +18,7 @@
         <div v-if="session.currentGameId" class="g-room-code" title="Click to copy" @click="handleCopyCode">
           {{ copiedMsg || session.currentGameId }}
         </div>
-        <button class="btn-exit-sm" @click="exitGame" title="Leave game">🚪</button>
+        <button class="btn-exit-sm" @click="handleExit" title="Leave game">🚪</button>
       </div>
     </div>
 
@@ -96,6 +96,7 @@ import ActionsPanel from '../game/ActionsPanel.vue'
 import { useGameState } from '../../composables/useGameState.js'
 import { useSession } from '../../composables/useSession.js'
 import { kickPlayer, copyCode, exitGame, _liveSeatMap } from '../../composables/useGameSync.js'
+import { requestConfirm } from '../../composables/useConfirm.js'
 
 const { gameState, playerName } = useGameState()
 const { session } = useSession()
@@ -109,6 +110,11 @@ async function handleCopyCode() {
   setTimeout(() => { copiedMsg.value = '' }, 1200)
 }
 const seatOccupied = (seat) => !!_liveSeatMap.value[seat]
+
+async function handleExit() {
+  const yes = await requestConfirm('Are you sure you want to exit the game?')
+  if (yes) exitGame()
+}
 
 function capPts(team) {
   return (gameState.captured[team] ?? []).reduce((s, c) => s + cardPts(c), 0) + (gameState.seepBonus[team] ?? 0)

@@ -16,6 +16,7 @@
   <FinalBanner />
   <HousePeekModal />
   <ChatPanel />
+  <ConfirmModal />
 </template>
 
 <script setup>
@@ -25,6 +26,7 @@ import SeepOverlay    from './components/ui/SeepOverlay.vue'
 import FinalBanner    from './components/ui/FinalBanner.vue'
 import HousePeekModal from './components/ui/HousePeekModal.vue'
 import ChatPanel      from './components/ui/ChatPanel.vue'
+import ConfirmModal   from './components/ui/ConfirmModal.vue'
 import HomeScreen     from './components/screens/HomeScreen.vue'
 import RoomScreen     from './components/screens/RoomScreen.vue'
 import BidScreen      from './components/screens/BidScreen.vue'

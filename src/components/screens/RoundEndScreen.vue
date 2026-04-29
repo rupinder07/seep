@@ -31,7 +31,7 @@
       >
         {{ isGameOver ? 'See Results' : 'Next Round ▶' }}
       </button>
-      <button class="btn btn-exit" style="padding:10px 24px;font-size:1rem" @click="exitGame">
+      <button class="btn btn-exit" style="padding:10px 24px;font-size:1rem" @click="handleExit">
         🚪 Exit Game
       </button>
     </div>
@@ -44,6 +44,12 @@ import { cardPts, WIN_SCORE } from '../../logic/constants.js'
 import { useGameState } from '../../composables/useGameState.js'
 import { nextRound } from '../../composables/useGameActions.js'
 import { exitGame } from '../../composables/useGameSync.js'
+import { requestConfirm } from '../../composables/useConfirm.js'
+
+async function handleExit() {
+  const yes = await requestConfirm('Are you sure you want to exit the game?')
+  if (yes) exitGame()
+}
 
 const { gameState } = useGameState()
 

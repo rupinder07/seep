@@ -20,7 +20,7 @@
       >Bid {{ rn(v) }} ({{ v }})</button>
       <button v-if="canPass" class="bid-btn pass" @click="reDealBid">Pass (Redeal)</button>
     </div>
-    <button class="btn btn-exit" style="margin-top:8px;padding:8px 24px;font-size:.9rem" @click="exitGame">
+    <button class="btn btn-exit" style="margin-top:8px;padding:8px 24px;font-size:.9rem" @click="handleExit">
       🚪 Exit Game
     </button>
   </div>
@@ -34,6 +34,12 @@ import { useGameState } from '../../composables/useGameState.js'
 import { useSession } from '../../composables/useSession.js'
 import { confirmBid, reDealBid } from '../../composables/useGameActions.js'
 import { exitGame } from '../../composables/useGameSync.js'
+import { requestConfirm } from '../../composables/useConfirm.js'
+
+async function handleExit() {
+  const yes = await requestConfirm('Are you sure you want to exit the game?')
+  if (yes) exitGame()
+}
 
 const { gameState, playerName } = useGameState()
 const { session } = useSession()
