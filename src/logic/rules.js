@@ -158,13 +158,8 @@ export function ruleThrow(ctx) {
 
 // ── Chain evaluator ──
 export function evaluateRules(ctx) {
-  const seep = ruleSeep(ctx);
-  if (seep.valid) {
-    const blocked = { valid: false, reason: 'Seep is mandatory' };
-    return { seep, pick: blocked, build: blocked, break: blocked, add: blocked, throw: blocked };
-  }
   return {
-    seep:  { valid: false },
+    seep:  ruleSeep(ctx),
     pick:  rulePick(ctx),
     build: ruleBuildHouse(ctx),
     break: ruleBreakHouse(ctx),
@@ -175,8 +170,8 @@ export function evaluateRules(ctx) {
 
 // ── Status message ──
 function buildStatusMsg(rules, ctx) {
-  if (rules.seep.valid) return `⚡ Seep — sweep entire floor (${ctx.floor.length} items)!`;
   if (rules.pick.valid)  return `Pick: take ${ctx.selItems.length} floor item(s)`;
+  if (rules.seep.valid) return `⚡ Seep available — sweep entire floor (${ctx.floor.length} items)!`;
   if (rules.build.valid) {
     const hv = rules.build.meta.houseVal;
     return rules.build.meta.merge
