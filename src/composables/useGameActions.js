@@ -179,6 +179,12 @@ export function allHandsEmpty() {
   return gameState.hands.every(h => h.length === 0)
 }
 
+export function clearFinal() {
+  gameState.finalEligible = null
+  gameState.finalHouseVal = null
+  if (session.currentGameId) _pushGameState()
+}
+
 export function doFinal() {
   if (session.localSeat !== null && session.localSeat !== gameState.finalEligible) return
   const val = gameState.finalHouseVal
