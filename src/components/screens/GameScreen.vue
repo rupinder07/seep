@@ -12,6 +12,9 @@
         </div>
       </div>
       <div class="g-round">Round {{ gameState.roundNum }}</div>
+      <div v-if="session.currentGameId" class="g-room-code" title="Click to copy" @click="handleCopyCode">
+        {{ copiedMsg || session.currentGameId }}
+      </div>
     </div>
 
     <!-- Table -->
@@ -79,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { cardPts } from '../../logic/constants.js'
 import PlayerHand  from '../game/PlayerHand.vue'
 import FloorArea   from '../game/FloorArea.vue'
@@ -87,12 +90,19 @@ import ActiveHand  from '../game/ActiveHand.vue'
 import ActionsPanel from '../game/ActionsPanel.vue'
 import { useGameState } from '../../composables/useGameState.js'
 import { useSession } from '../../composables/useSession.js'
-import { kickPlayer, _liveSeatMap } from '../../composables/useGameSync.js'
+import { kickPlayer, copyCode, _liveSeatMap } from '../../composables/useGameSync.js'
 
 const { gameState, playerName } = useGameState()
 const { session } = useSession()
 
 const isHost      = computed(() => session.hostUid && session.hostUid === session.localUid)
+const copiedMsg   = ref('')
+
+async function handleCopyCode() {
+  await copyCode()
+  copiedMsg.value = 'Copied!'
+  setTimeout(() => { copiedMsg.value = '' }, 1200)
+}
 const seatOccupied = (seat) => !!_liveSeatMap.value[seat]
 
 function capPts(team) {
