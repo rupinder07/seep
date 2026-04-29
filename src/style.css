@@ -141,8 +141,8 @@ body {
   cursor: pointer; transition: background .12s;
 }
 .menu-item:hover { background: rgba(255,255,255,.06); color: #fff; }
-.menu-item.danger { color: #ff8a8a; }
-.menu-item.danger:hover { background: rgba(180,30,30,.18); color: #ff8a8a; }
+.menu-item.menu-exit { color: #4cd47a; }
+.menu-item.menu-exit:hover { background: rgba(26,122,63,.25); color: #4cd47a; }
 
 /* ── Bid Screen ── */
 #bid-screen {
@@ -186,6 +186,7 @@ body {
 .g-score-label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; opacity: .75; }
 .g-score-val   { font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
 .g-score-sep   { font-size: .7rem; color: #666; padding: 0 2px; }
+.g-header-right { display: flex; align-items: center; gap: 8px; }
 .g-room-code {
   font-size: .75rem; font-weight: bold; letter-spacing: 2px;
   color: #ffd700; cursor: pointer; padding: 3px 8px;
@@ -437,7 +438,16 @@ body {
 .btn-seep    { background: #6a1e6a; color: #fff; border: 2px solid #cc55cc; }
 .btn-final   { background: #7a3a00; color: #fff; border: 2px solid #ffaa33; }
 .btn-primary { background: #ffd700; color: #000; }
-.btn-danger  { background: #6b2222; color: #fff; }
+.btn-exit    { background: #1a7a3f; color: #fff; border: 1px solid #2db360; }
+.btn-exit:not(:disabled):hover { background: #22a155; }
+
+/* Small exit icon button (game header) */
+.btn-exit-sm {
+  background: #1a7a3f; color: #fff; border: 1px solid #2db360;
+  border-radius: 7px; padding: 3px 9px; font-size: 1.1rem;
+  cursor: pointer; line-height: 1; transition: background .15s;
+}
+.btn-exit-sm:hover { background: #22a155; }
 
 /* ── Special buttons (Seep + Final) — glow when enabled ── */
 .btn-special:not(:disabled) {

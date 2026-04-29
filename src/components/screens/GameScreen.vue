@@ -14,8 +14,11 @@
           <div class="g-score-val">{{ gameState.scores[1] }}</div>
         </div>
       </div>
-      <div v-if="session.currentGameId" class="g-room-code" title="Click to copy" @click="handleCopyCode">
-        {{ copiedMsg || session.currentGameId }}
+      <div class="g-header-right">
+        <div v-if="session.currentGameId" class="g-room-code" title="Click to copy" @click="handleCopyCode">
+          {{ copiedMsg || session.currentGameId }}
+        </div>
+        <button class="btn-exit-sm" @click="exitGame" title="Leave game">🚪</button>
       </div>
     </div>
 
@@ -92,7 +95,7 @@ import ActiveHand  from '../game/ActiveHand.vue'
 import ActionsPanel from '../game/ActionsPanel.vue'
 import { useGameState } from '../../composables/useGameState.js'
 import { useSession } from '../../composables/useSession.js'
-import { kickPlayer, copyCode, _liveSeatMap } from '../../composables/useGameSync.js'
+import { kickPlayer, copyCode, exitGame, _liveSeatMap } from '../../composables/useGameSync.js'
 
 const { gameState, playerName } = useGameState()
 const { session } = useSession()

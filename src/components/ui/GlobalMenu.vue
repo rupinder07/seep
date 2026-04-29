@@ -12,7 +12,7 @@
           {{ copiedMsg || session.currentGameId }}
         </div>
       </div>
-      <button v-if="session.currentGameId" class="menu-item danger" @click="handleLeave">Leave Room</button>
+      <button v-if="session.currentGameId" class="menu-item menu-exit" @click="handleLeave">🚪 Leave Room</button>
       <button class="menu-item" @click="handleSignOut">Sign Out</button>
     </div>
   </div>

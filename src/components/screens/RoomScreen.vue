@@ -44,8 +44,8 @@
         style="padding:12px 36px;font-size:1rem"
         @click="hostStartGame"
       >Start Game ▶</button>
-      <button class="btn btn-danger" style="padding:12px 28px;font-size:1rem" @click="exitGame">
-        Leave Room
+      <button class="btn btn-exit" style="padding:12px 28px;font-size:1rem" @click="exitGame">
+        🚪 Leave Room
       </button>
     </div>
   </div>

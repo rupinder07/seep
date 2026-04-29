@@ -31,8 +31,8 @@
       >
         {{ isGameOver ? 'See Results' : 'Next Round ▶' }}
       </button>
-      <button class="btn btn-danger" style="padding:10px 24px;font-size:1rem" @click="exitGame">
-        Exit Game
+      <button class="btn btn-exit" style="padding:10px 24px;font-size:1rem" @click="exitGame">
+        🚪 Exit Game
       </button>
     </div>
   </div>

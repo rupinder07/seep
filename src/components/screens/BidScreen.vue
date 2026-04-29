@@ -20,8 +20,8 @@
       >Bid {{ rn(v) }} ({{ v }})</button>
       <button v-if="canPass" class="bid-btn pass" @click="reDealBid">Pass (Redeal)</button>
     </div>
-    <button class="btn btn-danger" style="margin-top:8px;padding:8px 24px;font-size:.9rem" @click="exitGame">
-      Exit Game
+    <button class="btn btn-exit" style="margin-top:8px;padding:8px 24px;font-size:.9rem" @click="exitGame">
+      🚪 Exit Game
     </button>
   </div>
 </template>
