@@ -16,8 +16,9 @@ import { subscribeChat, unsubscribeChat } from './useChat.js'
 const { session } = useSession()
 const { gameState, ui } = useGameState()
 
-let _roomRef  = null
-let _stateRef = null
+let _roomRef    = null
+let _stateRef   = null
+let _hostUidRef = null
 
 // ── Reactive room data (read by RoomScreen) ──
 export const _latestRoomData = ref(null)
@@ -32,11 +33,18 @@ function watchSeatMap(gameId) {
   onValue(_seatMapRef, snap => { _liveSeatMap.value = snap.val() || {} })
 }
 
+function watchHostUid(gameId) {
+  if (_hostUidRef) { off(_hostUidRef); _hostUidRef = null }
+  _hostUidRef = dbRef(DB, `games/${gameId}/hostUid`)
+  onValue(_hostUidRef, snap => { session.hostUid = snap.val() || null })
+}
+
 // ── Firebase listener refs ──
 export function unsubscribeAll() {
   if (_roomRef)    { off(_roomRef);    _roomRef    = null }
   if (_stateRef)   { off(_stateRef);   _stateRef   = null }
   if (_seatMapRef) { off(_seatMapRef); _seatMapRef = null }
+  if (_hostUidRef) { off(_hostUidRef); _hostUidRef = null }
 }
 
 // ── Push current game state to Firebase (stripped of UI-only fields) ──
@@ -109,6 +117,7 @@ export function subscribeRoom(gameId) {
   unsubscribeAll()
   subscribeChat(gameId)
   watchSeatMap(gameId)
+  watchHostUid(gameId)
   _roomRef = dbRef(DB, `games/${gameId}`)
   onValue(_roomRef, snap => {
     if (!snap.exists()) return
@@ -180,6 +189,7 @@ export async function copyCode() {
 export async function subscribeGameState(gameId) {
   subscribeChat(gameId)
   watchSeatMap(gameId)
+  watchHostUid(gameId)
   if (session.localSeat === null) {
     const saved = sessionStorage.getItem('seep_seat')
     if (saved !== null) {
@@ -272,6 +282,17 @@ export async function doSignOut() {
 export async function exitGame() {
   unsubscribeChat()
   if (!session.currentGameId) { session.screen = 'home'; return }
+
+  // If the leaving player is the host, transfer host to another seated player
+  if (session.localUid && session.localUid === session.hostUid) {
+    const seatSnap = await get(dbRef(DB, `games/${session.currentGameId}/seatMap`))
+    const seatMap  = seatSnap.val() || {}
+    const newHostUid = Object.values(seatMap).find(uid => uid && uid !== session.localUid)
+    if (newHostUid) {
+      await set(dbRef(DB, `games/${session.currentGameId}/hostUid`), newHostUid)
+    }
+  }
+
   if (session.localSeat !== null) {
     const seatDbRef = dbRef(DB, `games/${session.currentGameId}/seatMap/${session.localSeat}`)
     onDisconnect(seatDbRef).cancel()
@@ -282,5 +303,6 @@ export async function exitGame() {
   sessionStorage.removeItem('seep_seat')
   session.currentGameId = null
   session.localSeat     = null
+  session.hostUid       = null
   session.screen        = 'home'
 }

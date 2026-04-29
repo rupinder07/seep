@@ -176,10 +176,16 @@ body {
   padding: 0 16px; gap: 8px; width: 100%;
 }
 .g-header h1 { font-size: 1.1rem; letter-spacing: 3px; color: #ffd700; }
-.g-scores { display: flex; gap: 12px; }
-.g-score  { font-size: .8rem; padding: 3px 12px; border-radius: 6px; background: rgba(255,255,255,.1); }
+.g-scores { display: flex; align-items: center; gap: 8px; }
+.g-score  {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 4px 16px; border-radius: 8px;
+  background: rgba(255,255,255,.1); min-width: 64px;
+}
 .g-score.winning { background: rgba(255,215,0,.25); color: #ffd700; }
-.g-round  { font-size: .75rem; color: #888; }
+.g-score-label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; opacity: .75; }
+.g-score-val   { font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
+.g-score-sep   { font-size: .7rem; color: #666; padding: 0 2px; }
 .g-room-code {
   font-size: .75rem; font-weight: bold; letter-spacing: 2px;
   color: #ffd700; cursor: pointer; padding: 3px 8px;

@@ -5,13 +5,15 @@
       <h1>♠ SEEP</h1>
       <div class="g-scores">
         <div class="g-score" :class="{ winning: gameState.scores[0] > gameState.scores[1] }">
-          Team 1: <strong>{{ gameState.scores[0] }}</strong>
+          <div class="g-score-label">Team 1</div>
+          <div class="g-score-val">{{ gameState.scores[0] }}</div>
         </div>
+        <div class="g-score-sep">vs</div>
         <div class="g-score" :class="{ winning: gameState.scores[1] > gameState.scores[0] }">
-          Team 2: <strong>{{ gameState.scores[1] }}</strong>
+          <div class="g-score-label">Team 2</div>
+          <div class="g-score-val">{{ gameState.scores[1] }}</div>
         </div>
       </div>
-      <div class="g-round">Round {{ gameState.roundNum }}</div>
       <div v-if="session.currentGameId" class="g-room-code" title="Click to copy" @click="handleCopyCode">
         {{ copiedMsg || session.currentGameId }}
       </div>
