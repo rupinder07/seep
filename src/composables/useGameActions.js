@@ -190,12 +190,6 @@ export function doFinal() {
 }
 
 export function advanceTurn() {
-  // If the player who just acted is not the final-eligible player, that
-  // counts as "the next person played" — clear the declaration window.
-  if (gameState.finalEligible !== null && gameState.currentPlayer !== gameState.finalEligible) {
-    gameState.finalEligible = null
-    gameState.finalHouseVal = null
-  }
   if (!gameState.handsDealt) dealRemainingCards()
   if (allHandsEmpty()) { endRound(); return }
   gameState.currentPlayer = (gameState.currentPlayer + 1) % 4
@@ -249,6 +243,8 @@ export function nextRound() {
     isFirstTurn:     true,
     handsDealt:      false,
     lastCaptureTeam: null,
+    finalEligible:   null,
+    finalHouseVal:   null,
   })
   clearSel()
   gameState.hands[gameState.bidder] = gameState.deck.splice(0, 4)
