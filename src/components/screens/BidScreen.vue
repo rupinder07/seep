@@ -61,8 +61,8 @@ const hintText = computed(() => {
   return (canPass.value && canBid.value) ? 'You may pass (highest card is a non-♠ 9).' : ''
 })
 
-// Auto-redeal if no card ≥ 9
+// Auto-redeal if no card ≥ 9 — only during bid phase
 watch(canBid, (val) => {
-  if (!val && isBidder.value) setTimeout(reDealBid, 1200)
+  if (!val && isBidder.value && gameState.phase === 'bid') setTimeout(reDealBid, 1200)
 }, { immediate: true })
 </script>
