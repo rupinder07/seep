@@ -11,6 +11,7 @@ import { freshState, sortHand } from '../logic/state.js'
 import { useSession } from './useSession.js'
 import { useGameState } from './useGameState.js'
 import { setGameSyncPush } from './useGameActions.js'
+import { subscribeChat, unsubscribeChat } from './useChat.js'
 
 const { session } = useSession()
 const { gameState, ui } = useGameState()
@@ -106,6 +107,7 @@ export async function joinGame(code) {
 
 export function subscribeRoom(gameId) {
   unsubscribeAll()
+  subscribeChat(gameId)
   watchSeatMap(gameId)
   _roomRef = dbRef(DB, `games/${gameId}`)
   onValue(_roomRef, snap => {
@@ -176,6 +178,7 @@ export async function copyCode() {
 // ══════════════════════════════════════
 
 export async function subscribeGameState(gameId) {
+  subscribeChat(gameId)
   watchSeatMap(gameId)
   if (session.localSeat === null) {
     const saved = sessionStorage.getItem('seep_seat')
@@ -267,6 +270,7 @@ export async function doSignOut() {
 }
 
 export async function exitGame() {
+  unsubscribeChat()
   if (!session.currentGameId) { session.screen = 'home'; return }
   if (session.localSeat !== null) {
     const seatDbRef = dbRef(DB, `games/${session.currentGameId}/seatMap/${session.localSeat}`)
