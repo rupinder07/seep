@@ -4,7 +4,7 @@ import { computeActions } from '../logic/rules.js'
 import { useGameState } from './useGameState.js'
 import { useSession } from './useSession.js'
 
-const { gameState, ui, clearSel, showSeepOverlay, showFinalBanner } = useGameState()
+const { gameState, ui, clearSel, showSeepOverlay } = useGameState()
 const { session } = useSession()
 
 // Injected by useGameSync after it loads
@@ -187,14 +187,14 @@ export function clearFinal() {
 
 export function doFinal() {
   if (session.localSeat !== null && session.localSeat !== gameState.finalEligible) return
-  const val = gameState.finalHouseVal
+  gameState.finalAnnouncement = { seat: gameState.finalEligible, houseVal: gameState.finalHouseVal }
   gameState.finalEligible = null
   gameState.finalHouseVal = null
-  showFinalBanner(val)
   if (session.currentGameId) _pushGameState()
 }
 
 export function advanceTurn() {
+  gameState.finalAnnouncement = null
   if (!gameState.handsDealt) dealRemainingCards()
   if (allHandsEmpty()) { endRound(); return }
   gameState.currentPlayer = (gameState.currentPlayer + 1) % 4
@@ -248,8 +248,9 @@ export function nextRound() {
     isFirstTurn:     true,
     handsDealt:      false,
     lastCaptureTeam: null,
-    finalEligible:   null,
-    finalHouseVal:   null,
+    finalEligible:    null,
+    finalHouseVal:    null,
+    finalAnnouncement: null,
   })
   clearSel()
   gameState.hands[gameState.bidder] = gameState.deck.splice(0, 4)

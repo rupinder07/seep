@@ -41,6 +41,7 @@ export function freshState() {
     playerNames:      null,
     finalEligible:    null,   // seat index of player who may declare Final, or null
     finalHouseVal:    null,   // house value they built/contributed to
+    finalAnnouncement: null,  // { seat, houseVal } broadcast to all players, cleared on next turn
   };
 }
 
