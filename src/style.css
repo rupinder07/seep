@@ -236,19 +236,12 @@ body {
   min-height: 60px;
 }
 
-/* ── Hidden pile ── */
-.hidden-pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.pile-stack  { position: relative; width: 54px; height: 76px; }
+/* ── Face-down card (bid screen hand preview etc.) ── */
 .card.face-down {
   background: linear-gradient(145deg, #1a3a7a, #0a1a4a);
-  border-color: #3a5aaa; color: transparent; cursor: default;
+  border-color: #3a5aaa; cursor: default;
 }
-.card.face-down::after {
-  content: ''; position: absolute; inset: 4px;
-  border: 1.5px solid rgba(255,255,255,.15); border-radius: 4px;
-}
-.card.face-down:hover { transform: none; box-shadow: none; }
-.pile-label { font-size: .7rem; color: #7a9a7a; }
+.card.face-down:hover { transform: none; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 
 /* ── Floor zone ── */
 .floor-zone {
@@ -267,10 +260,10 @@ body {
 .cap-row span { color: #ffd700; }
 
 /* ── Floor cards slightly smaller than hand cards ── */
-.card.floor-card { width: 54px; height: 76px; }
-.card.floor-card .rank { font-size: 1rem; }
-.card.floor-card .suit { font-size: .95rem; }
-.card.floor-card .c-tl, .card.floor-card .c-br { font-size: .6rem; }
+.card.floor-card { width: 54px; height: 78px; }
+.card.floor-card .c-rank { font-size: .8rem; }
+.card.floor-card .c-suit { font-size: .65rem; }
+.card.floor-card .c-center { font-size: 1.4rem; }
 
 /* ── Action area ── */
 .g-actions {
@@ -288,23 +281,49 @@ body {
    CARDS
 ══════════════════════════════════════ */
 .card {
-  width: 74px; height: 105px;
-  background: #fff; color: #111; border-radius: 9px; border: 2px solid #ccc;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 66px; height: 96px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative; flex-shrink: 0;
   transition: transform .12s, box-shadow .12s;
+  user-select: none;
 }
-.card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.5); }
-.card.red { color: #cc0000; }
+.card:hover { transform: translateY(-6px); box-shadow: 0 10px 22px rgba(0,0,0,.45); }
+.card.red    { color: #d40000; }
+.card.black  { color: #111; }
 .card.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 0 3px #ffd700, 0 6px 18px rgba(255,215,0,.4);
-  transform: translateY(-8px);
+  border-color: #ffd700; border-width: 2px;
+  box-shadow: 0 0 0 3px #ffd700, 0 8px 20px rgba(255,215,0,.5);
+  transform: translateY(-10px);
 }
-.card .rank  { font-size: 1.45rem; font-weight: bold; line-height: 1.1; }
-.card .suit  { font-size: 1.35rem; line-height: 1; }
-.card .c-tl  { position: absolute; top: 4px; left: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; }
-.card .c-br  { position: absolute; bottom: 4px; right: 6px; font-size: .8rem; font-weight: bold; line-height: 1.2; transform: rotate(180deg); }
+
+/* corners */
+.card .c-tl {
+  position: absolute; top: 3px; left: 5px;
+  display: flex; flex-direction: column; align-items: center;
+  line-height: 1;
+}
+.card .c-br {
+  position: absolute; bottom: 3px; right: 5px;
+  display: flex; flex-direction: column; align-items: center;
+  line-height: 1; transform: rotate(180deg);
+}
+.card .c-rank { font-size: .95rem; font-weight: 800; line-height: 1; }
+.card .c-suit { font-size: .75rem; line-height: 1; }
+
+/* center suit */
+.card .c-center { font-size: 1.8rem; line-height: 1; }
+
+/* card count badge (replaces face-down hand) */
+.card-count-badge {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.3);
+  color: #fff; font-size: .9rem; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+}
 
 /* ── House ── */
 .house {
