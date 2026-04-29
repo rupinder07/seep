@@ -34,11 +34,16 @@ const bidDisp = computed(() =>
 
 const canHouse = computed(() => actions.value.build || actions.value.add)
 
-const canFinal = computed(() =>
-  gameState.finalEligible !== null &&
-  gameState.finalEligible === session.localSeat &&
-  gameState.currentPlayer === session.localSeat
-)
+const canFinal = computed(() => {
+  if (gameState.finalEligible === null) return false
+  // Online: must be your seat, your turn
+  if (session.localSeat !== null) {
+    return gameState.finalEligible === session.localSeat &&
+           gameState.currentPlayer === session.localSeat
+  }
+  // Local/offline: eligible player must be the current player
+  return gameState.finalEligible === gameState.currentPlayer
+})
 
 function doHouse() {
   if (actions.value.add) doAction('add')
